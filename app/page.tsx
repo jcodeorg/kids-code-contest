@@ -1,15 +1,29 @@
 "use client"
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase/client'
 
 export default function Home() {
   const router = useRouter()
   const [status, setStatus] = useState('')
+  const [siEmail, setSiEmail] = useState('')
+  const [siPassword, setSiPassword] = useState('')
+  const [signedIn, setSignedIn] = useState(false)
 
-  // sign in with Google
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const r: any = await supabase.auth.getUser()
+        if (r?.data?.user) setSignedIn(true)
+      } catch (e) {
+        // ignore
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function signInWithGoogle() {
     setStatus('Google にリダイレクトしています...')
     try {
@@ -19,9 +33,6 @@ export default function Home() {
     }
   }
 
-  // email sign-in
-  const [siEmail, setSiEmail] = useState('')
-  const [siPassword, setSiPassword] = useState('')
   async function handleEmailSignIn(e: React.FormEvent) {
     e.preventDefault()
     setStatus('サインイン中...')
@@ -31,7 +42,7 @@ export default function Home() {
         setStatus('エラー: ' + res.error.message)
         return
       }
-      // fetch role and redirect
+      // on success, redirect to dashboard based on role
       const userRes: any = await supabase.auth.getUser()
       const user = userRes?.data?.user
       if (user?.email) {
@@ -46,111 +57,52 @@ export default function Home() {
     }
   }
 
-  // email sign-up
-  const [suName, setSuName] = useState('')
-  const [suEmail, setSuEmail] = useState('')
-  const [suPassword, setSuPassword] = useState('')
-  const [suGuardian, setSuGuardian] = useState('')
-  async function handleEmailSignUp(e: React.FormEvent) {
-    e.preventDefault()
-    setStatus('アカウント作成中...')
+  async function handleSignOut() {
+    setStatus('サインアウト中...')
     try {
-      const res: any = await supabase.auth.signUp({ email: suEmail, password: suPassword, options: { data: { name: suName } } } as any)
-      if (res.error) {
-        setStatus('エラー: ' + res.error.message)
-        return
-      }
-      // create profile and send guardian consent
-      const regRes = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: suName, email: suEmail, guardianEmail: suGuardian }) })
-      if (!regRes.ok) {
-        const d = await regRes.json().catch(() => ({}))
-        setStatus('登録後処理でエラー: ' + (d?.error || regRes.status))
-        return
-      }
-      setStatus('登録完了。ダッシュボードへリダイレクトします...')
-      // try to sign in and redirect
-      try { await supabase.auth.signInWithPassword({ email: suEmail, password: suPassword } as any) } catch {}
-      const userRes: any = await supabase.auth.getUser()
-      const user = userRes?.data?.user
-      if (user?.email) {
-        const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
-        const role = profile?.role || 'applicant'
-        router.push(`/dashboard/${role}`)
-        return
-      }
-      router.push('/dashboard/applicant')
-    } catch (err) {
-      setStatus('サインアップ失敗')
+      await supabase.auth.signOut()
+      setSignedIn(false)
+      router.push('/')
+    } catch (e) {
+      setStatus('サインアウトに失敗しました')
     }
   }
 
   return (
-    <main style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
+    <main style={{ maxWidth: 640, margin: '0 auto', padding: 24 }}>
       <h1>北区こどもプログラミングコンテスト</h1>
-      <p>簡単にサインイン/サインアップできます。Google またはメールでどうぞ。</p>
 
-      <section style={{ marginBottom: 24 }}>
-        <h2>Google でサインイン / サインアップ</h2>
+      {signedIn && (
+        <div style={{ marginBottom: 12 }}>
+          <button onClick={handleSignOut}>サインアウト</button>
+        </div>
+      )}
+
+      <section style={{ marginBottom: 20 }}>
         <button onClick={signInWithGoogle}>Google で続行</button>
       </section>
 
-      <section style={{ display: 'flex', gap: 24, marginBottom: 24 }}>
-        <div style={{ flex: 1 }}>
-          <h3>メールでサインイン</h3>
-          <form onSubmit={handleEmailSignIn}>
-            <div>
-              <label>メール</label>
-              <br />
-              <input type="email" value={siEmail} onChange={(e) => setSiEmail(e.target.value)} required />
-            </div>
-            <div>
-              <label>パスワード</label>
-              <br />
-              <input type="password" value={siPassword} onChange={(e) => setSiPassword(e.target.value)} required />
-            </div>
-            <button type="submit">サインイン</button>
-          </form>
-        </div>
-
-        <div style={{ flex: 1 }}>
-          <h3>メールでサインアップ</h3>
-          <form onSubmit={handleEmailSignUp}>
-            <div>
-              <label>氏名</label>
-              <br />
-              <input value={suName} onChange={(e) => setSuName(e.target.value)} />
-            </div>
-            <div>
-              <label>メール</label>
-              <br />
-              <input type="email" value={suEmail} onChange={(e) => setSuEmail(e.target.value)} required />
-            </div>
-            <div>
-              <label>保護者メール</label>
-              <br />
-              <input type="email" value={suGuardian} onChange={(e) => setSuGuardian(e.target.value)} required />
-            </div>
-            <div>
-              <label>パスワード</label>
-              <br />
-              <input type="password" value={suPassword} onChange={(e) => setSuPassword(e.target.value)} required />
-            </div>
-            <button type="submit">サインアップ</button>
-          </form>
-        </div>
+      <section style={{ marginBottom: 20 }}>
+        <form onSubmit={handleEmailSignIn}>
+          <div style={{ marginBottom: 8 }}>
+            <label>メール</label>
+            <br />
+            <input type="email" value={siEmail} onChange={(e) => setSiEmail(e.target.value)} required />
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <label>パスワード</label>
+            <br />
+            <input type="password" value={siPassword} onChange={(e) => setSiPassword(e.target.value)} required />
+          </div>
+          <button type="submit">サインイン</button>
+        </form>
       </section>
 
-      <p>{status}</p>
+      <section>
+        <button onClick={() => router.push('/auth/signup')}>メールで新規登録</button>
+      </section>
 
-      <hr />
-      <ul>
-        <li>
-          <Link href="/auth/signup">別のサインアップページへ</Link>
-        </li>
-        <li>
-          <Link href="/auth/signin">別のサインインページへ</Link>
-        </li>
-      </ul>
+      <p style={{ marginTop: 16 }}>{status}</p>
     </main>
   )
 }
