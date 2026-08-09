@@ -37,7 +37,7 @@ export async function GET(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json()
-    const { user_id, role, is_active } = body
+    const { user_id, role, is_active, name, name_kana } = body
     if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 })
 
     const updates: any = {}
@@ -46,6 +46,15 @@ export async function PUT(req: Request) {
       updates.role = role
     }
     if (typeof is_active === 'boolean') updates.is_active = is_active
+    if (typeof name === 'string' && name.trim().length > 0) {
+      if (name.length > 200) return NextResponse.json({ error: 'name too long' }, { status: 400 })
+      updates.name = name.trim()
+    }
+    if (typeof name_kana === 'string') {
+      const v = name_kana.trim()
+      if (v.length > 200) return NextResponse.json({ error: 'name_kana too long' }, { status: 400 })
+      updates.name_kana = v
+    }
 
     if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'no updates provided' }, { status: 400 })
 

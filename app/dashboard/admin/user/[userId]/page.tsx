@@ -11,6 +11,8 @@ export default function EditUserPage() {
   const [loading, setLoading] = useState(false)
   const [role, setRole] = useState('')
   const [isActive, setIsActive] = useState(true)
+  const [name, setName] = useState('')
+  const [nameKana, setNameKana] = useState('')
   const ROLES = ['applicant', 'staff_primary', 'staff_manager', 'judge', 'admin']
 
   useEffect(() => {
@@ -24,6 +26,8 @@ export default function EditUserPage() {
           setUser(d.user)
           setRole(d.user.role)
           setIsActive(Boolean(d.user.is_active))
+            setName(d.user.name || '')
+            setNameKana(d.user.name_kana || '')
         }
       } catch (e) {
         // ignore
@@ -38,7 +42,7 @@ export default function EditUserPage() {
     if (!userId) return
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId, role, is_active: isActive }) })
+      const res = await fetch('/api/admin/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId, role, is_active: isActive, name, name_kana: nameKana }) })
       const d = await res.json()
       if (!res.ok) {
         alert('更新失敗: ' + (d?.error || res.status))
@@ -61,25 +65,42 @@ export default function EditUserPage() {
 
   return (
     <div className="card">
-      <h2>ユーザー編集</h2>
-      <p>メール: {user.email}</p>
-      <p>氏名: {user.name}</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <h2 style={{ margin: 0 }}>ユーザー編集</h2>
+        <div style={{ fontSize: 12, color: '#6b7280' }}>ID: {user.user_id}</div>
+      </div>
+
+      <div style={{ marginBottom: 14, color: '#374151' }}>
+        <div style={{ fontSize: 13 }}>メール: <strong>{user.email}</strong></div>
+      </div>
+
       <form onSubmit={handleUpdate}>
-        <div style={{ marginBottom: 8 }}>
-          <label>ロール</label>
-          <br />
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: 6 }}>氏名</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="山田 太郎" />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: 6 }}>フリガナ</label>
+            <input value={nameKana} onChange={(e) => setNameKana(e.target.value)} placeholder="ヤマダ タロウ" />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', marginBottom: 6 }}>ロール</label>
+          <select value={role} onChange={(e) => setRole(e.target.value)} style={{ width: 240 }}>
             {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
-        <div style={{ marginBottom: 8 }}>
-          <label>有効</label>
-          <br />
-          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input id="isActive" type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+          <label htmlFor="isActive">アカウント有効</label>
         </div>
+
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="submit" disabled={loading}>更新</button>
-          <button type="button" onClick={handleCancel}>キャンセル</button>
+          <button type="button" onClick={handleCancel} style={{ background: 'transparent', color: '#374151', border: '1px solid #e6eef8' }}>キャンセル</button>
         </div>
       </form>
     </div>
