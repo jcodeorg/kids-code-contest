@@ -16,7 +16,18 @@ export default function Home() {
     ;(async () => {
       try {
         const r: any = await supabase.auth.getUser()
-        if (r?.data?.user) setSignedIn(true)
+        const user = r?.data?.user
+        if (user) {
+          setSignedIn(true)
+          try {
+            const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
+            const role = profile?.role || 'applicant'
+            router.push(`/dashboard/${role}`)
+            return
+          } catch (e) {
+            // ignore and stay
+          }
+        }
       } catch (e) {
         // ignore
       }
