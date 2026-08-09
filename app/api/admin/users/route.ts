@@ -65,3 +65,19 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const body = await req.json()
+    const { user_id } = body
+    if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 })
+
+    // delete from users table
+    const { data, error } = await supabaseAdmin.from('users').delete().eq('user_id', user_id).select().single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    return NextResponse.json({ ok: true, user: data })
+  } catch (err: any) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}

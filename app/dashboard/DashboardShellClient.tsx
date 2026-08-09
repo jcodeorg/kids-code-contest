@@ -4,6 +4,7 @@ import React from 'react'
 import { usePathname } from 'next/navigation'
 import SignOutClient from './SignOutClient'
 import AdminPanel from './admin/AdminPanel'
+import ApplicantGuardianPanel from './ApplicantGuardianPanel'
 
 export default function DashboardShellClient({ paramsRole }: { paramsRole?: string }) {
   const pathname = usePathname() || ''
@@ -31,8 +32,18 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
         </>
       ) : (
         <>
-          <p>ここは <strong>{role}</strong> 向けのダッシュボードです。</p>
-          <p>必要なウィジェットやリンクをここに追加してください。</p>
+          {role === 'applicant' ? (
+            <>
+              <ApplicantGuardianPanel />
+              <p>ここは <strong>{role}</strong> 向けのダッシュボードです。</p>
+              <p>必要なウィジェットやリンクをここに追加してください。</p>
+            </>
+          ) : (
+            <>
+              <p>ここは <strong>{role}</strong> 向けのダッシュボードです。</p>
+              <p>必要なウィジェットやリンクをここに追加してください。</p>
+            </>
+          )}
         </>
       )}
     </div>

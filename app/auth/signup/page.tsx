@@ -9,7 +9,7 @@ export default function SignUpPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [guardianEmail, setGuardianEmail] = useState('')
+  
   const [status, setStatus] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
@@ -28,12 +28,12 @@ export default function SignUpPage() {
         return
       }
 
-      // create profile and send guardian consent email via server API
+      // create profile (guardian email will be collected later from dashboard)
       setStatus('プロファイル作成中...')
       const regRes = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, guardianEmail }),
+        body: JSON.stringify({ name, email }),
       })
       const regData = await regRes.json()
       if (!regRes.ok) {
@@ -41,28 +41,13 @@ export default function SignUpPage() {
         return
       }
 
-      setStatus('登録完了。保護者宛に同意メールを送信しました。')
-      // try to sign in automatically (may require email confirmation depending on Supabase settings)
-      try {
-        await supabase.auth.signInWithPassword({ email, password } as any)
-      } catch (e) {
-        // ignore sign-in errors; user can still check email
+      // Inform user to check email for confirmation. Guardian email is optional; if provided, guardian consent email will be sent separately.
+      if (regData?.guardianEmailSent) {
+        setStatus('登録完了。保護者宛に同意メールを送信しました。まずはご自身のメールの確認をお願いします。')
+      } else {
+        setStatus('登録完了。ご自身のメールに確認リンクを送信しました。メールの確認後にアカウントが利用可能になります。')
       }
-      setTimeout(async () => {
-        try {
-          const userRes: any = await supabase.auth.getUser()
-          const user = userRes?.data?.user
-          if (user?.email) {
-            const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
-            const role = profile?.role || 'applicant'
-            router.push(`/dashboard/${role}`)
-            return
-          }
-        } catch (err) {
-          // ignore
-        }
-        router.push('/dashboard/applicant')
-      }, 1200)
+      // do not attempt automatic sign-in here; wait for email confirmation
     } catch (err) {
       setStatus('送信に失敗しました')
     }
@@ -100,11 +85,7 @@ export default function SignUpPage() {
           <br />
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
-        <div style={{ marginBottom: 8 }}>
-          <label>保護者のメールアドレス</label>
-          <br />
-          <input type="email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} required />
-        </div>
+        {/* guardianEmail removed: will be requested from applicant dashboard */}
         <div style={{ marginBottom: 8 }}>
           <label>パスワード</label>
           <br />

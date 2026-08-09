@@ -8,8 +8,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     const { name, email, guardianEmail } = body
-    if (!email || !guardianEmail) {
-      return NextResponse.json({ error: 'email and guardianEmail are required' }, { status: 400 })
+    if (!email) {
+      return NextResponse.json({ error: 'email is required' }, { status: 400 })
     }
 
     // check existing user by email to avoid unique constraint violation
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       const { data: updated, error: updateErr } = await supabaseAdmin
         .from('users')
         .update({
-          guardian_email: guardianEmail,
+          guardian_email: guardianEmail || null,
           guardian_consent: 'pending',
           guardian_consent_token: token,
         })
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
         .insert({
           name: name || null,
           email,
-          guardian_email: guardianEmail,
+          guardian_email: guardianEmail || null,
           guardian_consent: 'pending',
           guardian_consent_token: token,
         })
@@ -85,24 +85,27 @@ export async function POST(req: Request) {
       fromAddress = 'no-reply@example.com'
     }
 
-    try {
-      await resend.emails.send({
-        from: fromAddress,
-        to: guardianEmail,
-        subject: '【要同意】保護者同意のお願い - キッズプログラミングコンテスト',
-        html: `
+    // send guardian consent email only when guardianEmail provided
+    if (guardianEmail) {
+      try {
+        await resend.emails.send({
+          from: fromAddress,
+          to: guardianEmail,
+          subject: '【要同意】保護者同意のお願い - キッズプログラミングコンテスト',
+          html: `
         <p>保護者様</p>
         <p>${name || '参加者'} さんの登録がありました。下のリンクを押して保護者同意をお願いします。</p>
         <p><a href="${consentUrl}">同意・確認ページへ</a></p>
         <p>このメールに心当たりがない場合は無視してください。</p>
       `,
-      })
-    } catch (sendErr) {
-      console.error('[Resend API Error]:', sendErr)
-      return NextResponse.json({ error: 'Failed to send guardian email' }, { status: 500 })
+        })
+      } catch (sendErr) {
+        console.error('[Resend API Error]:', sendErr)
+        return NextResponse.json({ error: 'Failed to send guardian email' }, { status: 500 })
+      }
     }
 
-    return NextResponse.json({ ok: true, user: userRecord })
+    return NextResponse.json({ ok: true, user: userRecord, guardianEmailSent: Boolean(guardianEmail) })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }

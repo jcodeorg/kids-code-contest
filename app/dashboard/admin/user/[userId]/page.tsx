@@ -101,6 +101,29 @@ export default function EditUserPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="submit" disabled={loading}>更新</button>
           <button type="button" onClick={handleCancel} style={{ background: 'transparent', color: '#374151', border: '1px solid #e6eef8' }}>キャンセル</button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!confirm('本当にこのユーザーを削除しますか？この操作は取り消せません。')) return
+              try {
+                setLoading(true)
+                const res = await fetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId }) })
+                const d = await res.json()
+                if (!res.ok) {
+                  alert('削除に失敗しました: ' + (d?.error || res.status))
+                  return
+                }
+                router.push('/dashboard/admin')
+              } catch (e: any) {
+                alert('削除に失敗しました: ' + (e?.message || String(e)))
+              } finally {
+                setLoading(false)
+              }
+            }}
+            style={{ background: '#ef4444', borderColor: 'transparent', boxShadow: 'none' }}
+          >
+            ユーザー削除
+          </button>
         </div>
       </form>
     </div>
