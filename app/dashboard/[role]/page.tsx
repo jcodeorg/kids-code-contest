@@ -1,8 +1,9 @@
 import React from 'react'
 import DashboardShellClient from '../DashboardShellClient'
 
-export default function RoleDashboard({ params }: { params: { role: string } }) {
-  const role = params.role || 'applicant'
+export default async function RoleDashboard({ params }: { params: Promise<{ role?: string }> | { role?: string } }) {
+  const p = await params
+  const role = p?.role || 'applicant'
   const titleMap: Record<string, string> = {
     applicant: '応募者ダッシュボード',
     staff_primary: '一次採点スタッフダッシュボード',

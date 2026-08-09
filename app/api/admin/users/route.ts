@@ -9,10 +9,19 @@ export async function GET(req: Request) {
     const q = url.searchParams.get('q') || undefined
     const role = url.searchParams.get('role') || undefined
     const guardian = url.searchParams.get('guardian') || undefined
+    const user_id = url.searchParams.get('user_id') || undefined
+
+    // if user_id is provided, return single user
+    if (user_id) {
+      const { data, error } = await supabaseAdmin.from('users').select('user_id,email,name,role,guardian_consent,is_active,created_at').eq('user_id', user_id).single()
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ user: data })
+    }
 
     let query = supabaseAdmin.from('users').select('user_id,email,name,role,guardian_consent,is_active,created_at').order('created_at', { ascending: false })
     if (q) {
-      query = query.ilike('email', `%${q}%`).or(`name.ilike.%${q}%`)
+      // basic ilike on email OR name
+      query = query.or(`email.ilike.%${q}%,name.ilike.%${q}%`)
     }
     if (role) query = query.eq('role', role)
     if (guardian) query = query.eq('guardian_consent', guardian)

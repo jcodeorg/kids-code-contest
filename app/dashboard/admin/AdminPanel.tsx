@@ -42,15 +42,9 @@ export default function AdminPanel() {
     fetchUsers()
   }, [])
 
-  async function updateUser(user_id: string, payload: any) {
-    try {
-      const res = await fetch('/api/admin/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id, ...payload }) })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || 'update failed')
-      setUsers((prev) => prev.map((u) => (u.user_id === user_id ? { ...u, ...data.user } : u)))
-    } catch (e: any) {
-      alert('更新に失敗しました: ' + (e?.message || e))
-    }
+  function editUser(user_id: string) {
+    // navigate to edit page
+    window.location.href = `/dashboard/admin/user/${user_id}`
   }
 
   return (
@@ -90,16 +84,11 @@ export default function AdminPanel() {
               <tr key={u.user_id}>
                 <td style={{ padding: '6px 4px' }}>{u.email}</td>
                 <td style={{ padding: '6px 4px' }}>{u.name}</td>
-                <td style={{ padding: '6px 4px' }}>
-                  <select defaultValue={u.role} onChange={(e) => updateUser(u.user_id, { role: e.target.value })}>
-                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </td>
+                <td style={{ padding: '6px 4px' }}>{u.role}</td>
                 <td style={{ padding: '6px 4px' }}>{u.guardian_consent}</td>
-                <td style={{ padding: '6px 4px' }}>
-                  <input type="checkbox" checked={u.is_active} onChange={(e) => updateUser(u.user_id, { is_active: e.target.checked })} />
-                </td>
-                <td style={{ padding: '6px 4px' }}>
+                <td style={{ padding: '6px 4px' }}>{u.is_active ? '有効' : '無効'}</td>
+                <td style={{ padding: '6px 4px', display: 'flex', gap: 8 }}>
+                  <button onClick={() => editUser(u.user_id)}>編集</button>
                   <button onClick={() => navigator.clipboard?.writeText(u.email)}>メールコピー</button>
                 </td>
               </tr>
