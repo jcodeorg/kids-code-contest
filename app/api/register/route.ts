@@ -7,7 +7,7 @@ const resend = new Resend(process.env.RESEND_API_KEY as string)
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { name, email, guardianEmail } = body
+    const { name, email, guardianEmail, inviteToken } = body
     if (!email) {
       return NextResponse.json({ error: 'email is required' }, { status: 400 })
     }
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
 
     const token = crypto.randomUUID()
     let userRecord: any = null
+    let appliedInvite: any = null
 
     if (Array.isArray(existingRows) && existingRows.length > 0) {
       // existing user: update token and set consent back to pending, then resend
@@ -61,6 +62,32 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
       userRecord = data
+    }
+
+    // If inviteToken provided, validate and apply role
+    if (inviteToken) {
+      try {
+        const { data: invites, error: inviteErr } = await supabaseAdmin.from('invites').select('*').eq('token', inviteToken).limit(1).single()
+        if (!inviteErr && invites) {
+          const inv = invites as any
+          const now = new Date().toISOString()
+          const maxUses = inv.max_uses ?? 1
+          const useCount = inv.use_count ?? 0
+          const expired = inv.expires_at && inv.expires_at <= now
+          const exhausted = (typeof maxUses === 'number' && maxUses > 0 && useCount >= maxUses)
+          if (inv.status === 'active' && !expired && !exhausted) {
+            // set user's role to target_role
+            await supabaseAdmin.from('users').update({ role: inv.target_role }).eq('user_id', userRecord.user_id)
+            // increment use_count
+            await supabaseAdmin.from('invites').update({ use_count: (useCount + 1) }).eq('invite_id', inv.invite_id)
+            // record usage
+            await supabaseAdmin.from('invite_usages').insert({ invite_id: inv.invite_id, used_by_user_id: userRecord.user_id })
+            appliedInvite = inv
+          }
+        }
+      } catch (e) {
+        // ignore invite errors
+      }
     }
 
     const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'

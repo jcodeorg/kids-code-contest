@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase/client'
+import { useSearchParams } from 'next/navigation'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -11,6 +12,8 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('')
   
   const [status, setStatus] = useState('')
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams?.get('token') || ''
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -33,7 +36,7 @@ export default function SignUpPage() {
       const regRes = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify({ name, email, inviteToken }),
       })
       const regData = await regRes.json()
       if (!regRes.ok) {
@@ -60,9 +63,22 @@ export default function SignUpPage() {
         const userRes: any = await supabase.auth.getUser()
         const user = userRes?.data?.user
         if (user?.email) {
-          const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
-          const role = profile?.role || 'applicant'
-          router.push(`/dashboard/${role}`)
+          try {
+            const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
+            const role = profile?.role || 'applicant'
+            router.push(`/dashboard/${role}`)
+            return
+          } catch (err) {
+            // create profile for OAuth users
+            try {
+              const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
+              await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email: user.email }) })
+            } catch (e) {
+              // ignore
+            }
+            router.push('/dashboard/applicant')
+            return
+          }
         }
       } catch (e) {
         // ignore

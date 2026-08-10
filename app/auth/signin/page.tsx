@@ -3,12 +3,15 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase/client'
+import { useSearchParams } from 'next/navigation'
 
 export default function SignInPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState('')
+  const searchParams = useSearchParams()
+  const inviteToken = searchParams?.get('token') || ''
 
   async function signInWithGoogle() {
     setStatus('Googleでサインイン中...')
@@ -25,9 +28,24 @@ export default function SignInPage() {
       const userRes: any = await supabase.auth.getUser()
       const user = userRes?.data?.user
       if (!user?.email) return
-      const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
-      const role = profile?.role || 'applicant'
-      router.push(`/dashboard/${role}`)
+      // try to read profile; if missing, create via server API (handles OAuth signups)
+      try {
+        const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
+        const role = profile?.role || 'applicant'
+        router.push(`/dashboard/${role}`)
+        return
+      } catch (e) {
+        // profile missing — create it server-side
+        try {
+          const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
+          await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email: user.email }) })
+        } catch (err) {
+          // ignore
+        }
+        // redirect to applicant dashboard by default
+        router.push('/dashboard/applicant')
+        return
+      }
     } catch (e) {
       // fallback
       router.push('/dashboard/applicant')
@@ -42,6 +60,14 @@ export default function SignInPage() {
       if (res.error) {
         setStatus('サインイン失敗: ' + res.error.message)
         return
+      }
+      // if invite token present, apply to this user
+      if (inviteToken) {
+        try {
+          await fetch('/api/invite/apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: inviteToken, email }) })
+        } catch (e) {
+          // ignore
+        }
       }
       setStatus('サインイン成功')
       await fetchRoleAndRedirect()
