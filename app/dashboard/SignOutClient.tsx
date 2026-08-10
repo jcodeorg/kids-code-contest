@@ -16,7 +16,7 @@ export default function SignOutClient({ role }: { role: string }) {
       // ignore
     }
     setLoading(false)
-    router.push('/auth/signin')
+    router.push('/')
   }
 
   return (

@@ -43,13 +43,10 @@ function SignUpPageContent() {
         return
       }
 
-      // Inform user to check email for confirmation. Guardian email is optional; if provided, guardian consent email will be sent separately.
-      if (regData?.guardianEmailSent) {
-        setStatus('登録完了。保護者宛に同意メールを送信しました。まずはご自身のメールの確認をお願いします。')
-      } else {
-        setStatus('登録完了。ご自身のメールに確認リンクを送信しました。メールの確認後にアカウントが利用可能になります。')
-      }
-      // do not attempt automatic sign-in here; wait for email confirmation
+      const doneMessage = '登録完了。ご自身のメールに確認リンクを送信しました。メールの確認後にアカウントが利用可能になります。'
+      window.alert(doneMessage)
+      router.push('/')
+      return
     } catch (err) {
       setStatus('送信に失敗しました')
     }
