@@ -40,7 +40,7 @@ function SignInPageContent() {
       try {
         const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
         const role = profile?.role || 'applicant'
-        router.push(`/dashboard/${role}`)
+        router.push(`/${role}`)
         return
       } catch (e) {
         // profile missing — create it server-side
@@ -51,12 +51,12 @@ function SignInPageContent() {
           // ignore
         }
         // redirect to applicant dashboard by default
-        router.push('/dashboard/applicant')
+        router.push('/applicant')
         return
       }
     } catch (e) {
       // fallback
-      router.push('/dashboard/applicant')
+      router.push('/applicant')
     }
   }
 

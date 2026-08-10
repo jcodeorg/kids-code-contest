@@ -9,6 +9,7 @@ export default function Home() {
   const router = useRouter()
   const [status, setStatus] = useState('')
   const [signedIn, setSignedIn] = useState(false)
+  const [role, setRole] = useState<string>('applicant')
 
   useEffect(() => {
     ;(async () => {
@@ -22,11 +23,17 @@ export default function Home() {
             const provider = user?.app_metadata?.provider || (user?.app_metadata?.providers && user.app_metadata.providers[0]) || (user?.identities && user.identities[0]?.provider)
             const display = provider ? `${provider}でサインイン中` : `${user.email || 'サインイン中'}でサインイン中`
             setStatus(display)
-            return
           } catch (e) {
             setStatus(`${user.email || 'サインイン中'}でサインイン中`)
-            return
           }
+          // try to load role from profile; default to applicant
+          try {
+            const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
+            setRole(profile?.role || 'applicant')
+          } catch (err) {
+            setRole('applicant')
+          }
+          return
         }
       } catch (e) {
         // ignore
@@ -68,7 +75,8 @@ export default function Home() {
       <h1>北区こどもプログラミングコンテスト</h1>
 
       {signedIn ? (
-        <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
+          <button onClick={() => router.push(`/${role}`)}>ダッシュボードへ</button>
           <button onClick={handleSignOut}>サインアウト</button>
         </div>
       ) : (

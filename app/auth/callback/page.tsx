@@ -49,7 +49,7 @@ export default function AuthCallbackPage() {
           } catch (e) {
             // ignore and continue
           }
-          if (active) router.replace('/dashboard/applicant')
+          if (active) router.replace('/applicant')
           return
         }
       } catch (e) {

@@ -65,7 +65,7 @@ function SignUpPageContent() {
           try {
             const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
             const role = profile?.role || 'applicant'
-            router.push(`/dashboard/${role}`)
+            router.push(`/${role}`)
             return
           } catch (err) {
             // create profile for OAuth users
@@ -75,7 +75,7 @@ function SignUpPageContent() {
             } catch (e) {
               // ignore
             }
-            router.push('/dashboard/applicant')
+            router.push('/applicant')
             return
           }
         }
