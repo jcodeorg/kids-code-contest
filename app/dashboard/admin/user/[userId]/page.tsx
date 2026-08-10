@@ -60,72 +60,74 @@ export default function EditUserPage() {
     router.push('/dashboard/admin')
   }
 
-  if (loading) return <div className="card">読み込み中...</div>
-  if (!user) return <div className="card">ユーザーが見つかりません。</div>
+  if (loading) return <div className="max-w-2xl mx-auto alert alert-info">読み込み中...</div>
+  if (!user) return <div className="max-w-2xl mx-auto alert alert-warning">ユーザーが見つかりません。</div>
 
   return (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h2 style={{ margin: 0 }}>ユーザー編集</h2>
-        <div style={{ fontSize: 12, color: '#6b7280' }}>ID: {user.user_id}</div>
-      </div>
-
-      <div style={{ marginBottom: 14, color: '#374151' }}>
-        <div style={{ fontSize: 13 }}>メール: <strong>{user.email}</strong></div>
-      </div>
-
-      <form onSubmit={handleUpdate}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: 6 }}>氏名</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="山田 太郎" />
+    <div className="w-full px-4 py-10">
+      <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
+        <div className="card-body">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+            <h2 className="card-title text-2xl">ユーザー編集</h2>
+            <div className="text-xs text-base-content/60">ID: {user.user_id}</div>
           </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: 6 }}>フリガナ</label>
-            <input value={nameKana} onChange={(e) => setNameKana(e.target.value)} placeholder="ヤマダ タロウ" />
-          </div>
-        </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: 'block', marginBottom: 6 }}>ロール</label>
-          <select value={role} onChange={(e) => setRole(e.target.value)} style={{ width: 240 }}>
-            {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
-        </div>
+          <div className="badge badge-outline">メール: {user.email}</div>
 
-        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input id="isActive" type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-          <label htmlFor="isActive">アカウント有効</label>
-        </div>
+          <form onSubmit={handleUpdate} className="space-y-4 mt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="form-control w-full">
+                <div className="label"><span className="label-text">氏名</span></div>
+                <input className="input input-bordered w-full" value={name} onChange={(e) => setName(e.target.value)} placeholder="山田 太郎" />
+              </label>
+              <label className="form-control w-full">
+                <div className="label"><span className="label-text">フリガナ</span></div>
+                <input className="input input-bordered w-full" value={nameKana} onChange={(e) => setNameKana(e.target.value)} placeholder="ヤマダ タロウ" />
+              </label>
+            </div>
 
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button type="submit" disabled={loading}>更新</button>
-          <button type="button" onClick={handleCancel} style={{ background: 'transparent', color: '#374151', border: '1px solid #e6eef8' }}>キャンセル</button>
-          <button
-            type="button"
-            onClick={async () => {
-              if (!confirm('本当にこのユーザーを削除しますか？この操作は取り消せません。')) return
-              try {
-                setLoading(true)
-                const res = await fetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId }) })
-                const d = await res.json()
-                if (!res.ok) {
-                  alert('削除に失敗しました: ' + (d?.error || res.status))
-                  return
-                }
-                router.push('/dashboard/admin')
-              } catch (e: any) {
-                alert('削除に失敗しました: ' + (e?.message || String(e)))
-              } finally {
-                setLoading(false)
-              }
-            }}
-            style={{ background: '#ef4444', borderColor: 'transparent', boxShadow: 'none' }}
-          >
-            ユーザー削除
-          </button>
+            <label className="form-control w-full max-w-xs">
+              <div className="label"><span className="label-text">ロール</span></div>
+              <select className="select select-bordered" value={role} onChange={(e) => setRole(e.target.value)}>
+                {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </label>
+
+            <label className="label cursor-pointer justify-start gap-3 p-0">
+              <input className="checkbox checkbox-primary" id="isActive" type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+              <span className="label-text">アカウント有効</span>
+            </label>
+
+            <div className="flex flex-wrap gap-3">
+              <button className="btn btn-primary" type="submit" disabled={loading}>保存</button>
+              <button className="btn btn-ghost" type="button" onClick={handleCancel}>キャンセル</button>
+              <button
+                className="btn btn-error btn-outline"
+                type="button"
+                onClick={async () => {
+                  if (!confirm('本当にこのユーザーを削除しますか？この操作は取り消せません。')) return
+                  try {
+                    setLoading(true)
+                    const res = await fetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId }) })
+                    const d = await res.json()
+                    if (!res.ok) {
+                      alert('削除に失敗しました: ' + (d?.error || res.status))
+                      return
+                    }
+                    router.push('/dashboard/admin')
+                  } catch (e: any) {
+                    alert('削除に失敗しました: ' + (e?.message || String(e)))
+                  } finally {
+                    setLoading(false)
+                  }
+                }}
+              >
+                ユーザー削除
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
+      </div>
     </div>
   )
 }

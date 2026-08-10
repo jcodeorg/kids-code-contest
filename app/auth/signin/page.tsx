@@ -92,28 +92,35 @@ function SignInPageContent() {
   }, [])
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
-      <h1>サインイン</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 8 }}>
-          <label>メールアドレス</label>
-          <br />
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+    <div className="w-full px-4 py-10">
+      <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
+        <div className="card-body">
+          <h1 className="card-title text-2xl">サインイン</h1>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <label className="form-control w-full">
+              <div className="label"><span className="label-text">メールアドレス</span></div>
+              <input className="input input-bordered w-full" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </label>
+
+            <label className="form-control w-full">
+              <div className="label"><span className="label-text">パスワード</span></div>
+              <input className="input input-bordered w-full" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </label>
+
+            <div className="flex flex-wrap gap-3">
+              <button className="btn btn-primary" type="submit">サインイン</button>
+              <button className="btn btn-outline" type="button" onClick={signInWithGoogle}>Googleでサインイン</button>
+            </div>
+          </form>
+
+          <p className="text-sm">
+            はじめての方は <Link className="link link-primary" href="/auth/signup">メールでサインアップ</Link>
+          </p>
+
+          {status ? <div className="alert alert-info text-sm">{status}</div> : null}
         </div>
-        <div style={{ marginBottom: 8 }}>
-          <label>パスワード</label>
-          <br />
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        </div>
-        <button type="submit">サインイン</button>
-      </form>
-      <p style={{ marginTop: 8 }}>
-        はじめての方は <Link href="/auth/signup">メールでサインアップ</Link>
-      </p>
-      <div style={{ marginTop: 12 }}>
-        <button onClick={signInWithGoogle}>Googleでサインイン</button>
       </div>
-      <p>{status}</p>
     </div>
   )
 }

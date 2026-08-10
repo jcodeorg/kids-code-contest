@@ -72,27 +72,29 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 640, margin: '0 auto', padding: 24 }}>
-      <h1>北区こどもプログラミングコンテスト</h1>
+    <main className="w-full px-4 py-10">
+      <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
+        <div className="card-body gap-6">
+          <div>
+            <h1 className="card-title text-3xl">北区こどもプログラミングコンテスト</h1>
+            <p className="text-sm text-base-content/70 mt-2">安全なサインインで、応募・審査・運営の各ダッシュボードへアクセスできます。</p>
+          </div>
 
-      {signedIn ? (
-        <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
-          <button onClick={() => router.push(`/${role}`)}>ダッシュボードへ</button>
-          <button onClick={handleSignOut}>サインアウト</button>
+          {signedIn ? (
+            <div className="flex flex-wrap gap-3">
+              <button className="btn btn-primary" onClick={() => router.push(`/${role}`)}>ダッシュボードへ</button>
+              <button className="btn btn-ghost" onClick={handleSignOut}>サインアウト</button>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button className="btn btn-primary" onClick={signInWithGoogle}>Googleではじめる</button>
+              <button className="btn btn-outline" onClick={() => router.push('/auth/signin')}>メールでサインイン</button>
+            </div>
+          )}
+
+          {status ? <div className="alert alert-info text-sm">{status}</div> : null}
         </div>
-      ) : (
-        <>
-          <section style={{ marginBottom: 20 }}>
-            <button onClick={signInWithGoogle}>Googleではじめる</button>
-          </section>
-
-          <section style={{ marginBottom: 20 }}>
-            <button onClick={() => router.push('/auth/signin')}>メールでサインイン</button>
-          </section>
-        </>
-      )}
-
-      <p style={{ marginTop: 16 }}>{status}</p>
+      </div>
     </main>
   )
 }

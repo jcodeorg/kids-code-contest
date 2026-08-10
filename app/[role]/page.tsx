@@ -19,18 +19,26 @@ export default async function RoleDashboard({ params }: { params: Promise<{ role
   const { data: profile, error: profileErr } = await supabase.from('users').select('role').eq('email', user.email).limit(1).single()
   if (profileErr || !profile) {
     return (
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: 24 }}>
-        <h2>プロフィールが見つかりません</h2>
-        <p>管理者にお問い合わせください。</p>
+      <div className="w-full px-4 py-10">
+        <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
+          <div className="card-body">
+            <h2 className="card-title text-2xl">プロフィールが見つかりません</h2>
+            <p className="text-base-content/70">管理者にお問い合わせください。</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (profile.role !== role) {
     return (
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: 24 }}>
-        <h2>アクセス不可</h2>
-        <p>このページを表示する権限がありません。</p>
+      <div className="w-full px-4 py-10">
+        <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
+          <div className="card-body">
+            <h2 className="card-title text-2xl">アクセス不可</h2>
+            <p className="text-base-content/70">このページを表示する権限がありません。</p>
+          </div>
+        </div>
       </div>
     )
   }

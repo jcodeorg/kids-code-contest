@@ -73,47 +73,49 @@ export default function ApplicantGuardianPanel() {
     }
   }
 
-  if (loading) return <div style={{ marginBottom: 12 }}>読み込み中...</div>
-  if (!profile) return <div style={{ marginBottom: 12 }}>サインインしてください。</div>
+  if (loading) return <div className="alert alert-info mb-4">読み込み中...</div>
+  if (!profile) return <div className="alert alert-warning mb-4">サインインしてください。</div>
 
   return (
-    <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, background: 'linear-gradient(90deg,#f8fafc,#ffffff)' }}>
-      <h3 style={{ marginTop: 0 }}>保護者同意ステータス</h3>
-      <div style={{ marginBottom: 8 }}>
+    <div className="card bg-base-100 shadow-md border border-base-200 mb-6">
+      <div className="card-body gap-4">
+      <h3 className="card-title">保護者同意ステータス</h3>
+      <div>
         {profile.guardian_email ? (
           <div>
-            <div>保護者メール: <strong>{profile.guardian_email}</strong></div>
-            <div>ステータス: <strong>{profile.guardian_consent || 'pending'}</strong>{profile.guardian_consent_at ? `（${new Date(profile.guardian_consent_at).toLocaleString()}）` : ''}</div>
+            <div className="text-sm">保護者メール: <strong>{profile.guardian_email}</strong></div>
+            <div className="text-sm mt-1">ステータス: <strong>{profile.guardian_consent || 'pending'}</strong>{profile.guardian_consent_at ? `（${new Date(profile.guardian_consent_at).toLocaleString()}）` : ''}</div>
           </div>
         ) : (
           <div>
-            <div style={{ fontWeight: 700 }}>保護者メールが未登録です</div>
-            <div style={{ marginTop: 6 }}>保護者のメールアドレスを登録すると、保護者宛に同意メールが送信されます。保護者が同意すると審査対象になります。</div>
+            <div className="font-bold">保護者メールが未登録です</div>
+            <div className="mt-2 text-sm text-base-content/70">保護者のメールアドレスを登録すると、保護者宛に同意メールが送信されます。保護者が同意すると審査対象になります。</div>
           </div>
         )}
       </div>
 
       {profile.guardian_email ? (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={handleResend}>同意メールを再送</button>
-          <button onClick={fetchProfile} style={{ background: 'transparent', color: '#374151', border: '1px solid #e6eef8' }}>更新</button>
+        <div className="flex flex-wrap gap-3">
+          <button className="btn btn-primary" onClick={handleResend}>同意メールを再送</button>
+          <button className="btn btn-ghost" onClick={fetchProfile}>更新</button>
         </div>
       ) : (
         <div>
           {!editing ? (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setEditing(true)}>保護者メールを登録する</button>
+            <div className="flex flex-wrap gap-3">
+              <button className="btn btn-primary" onClick={() => setEditing(true)}>保護者メールを登録する</button>
             </div>
           ) : (
-            <form onSubmit={handleAddGuardian} style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <input type="email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} placeholder="guardian@example.com" />
-              <button type="submit">送信</button>
-              <button type="button" onClick={() => { setEditing(false); setGuardianEmail(''); }} style={{ background: 'transparent', color: '#374151', border: '1px solid #e6eef8' }}>キャンセル</button>
+            <form onSubmit={handleAddGuardian} className="flex flex-col sm:flex-row gap-3 mt-2">
+              <input className="input input-bordered w-full" type="email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} placeholder="guardian@example.com" />
+              <button className="btn btn-primary" type="submit">送信</button>
+              <button className="btn btn-ghost" type="button" onClick={() => { setEditing(false); setGuardianEmail(''); }}>キャンセル</button>
             </form>
           )}
-          <div style={{ marginTop: 8, fontSize: 13, color: '#6b7280' }}>{status}</div>
+          {status ? <div className="alert alert-info mt-3 text-sm">{status}</div> : null}
         </div>
       )}
+      </div>
     </div>
   )
 }

@@ -20,10 +20,10 @@ export default function SignOutClient({ role }: { role: string }) {
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-      <div>現在のロール: <strong>{role}</strong></div>
-      <div>
-        <button onClick={handleSignOut} disabled={loading}>{loading ? 'サインアウト中...' : 'サインアウト'}</button>
+    <div className="card bg-base-100 border border-base-200 mb-4">
+      <div className="card-body p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm">現在のロール: <strong>{role}</strong></div>
+        <button className="btn btn-ghost" onClick={handleSignOut} disabled={loading}>{loading ? 'サインアウト中...' : 'サインアウト'}</button>
       </div>
     </div>
   )

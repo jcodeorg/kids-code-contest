@@ -84,28 +84,33 @@ function SignUpPageContent() {
   }, [])
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
-      <h1>サインアップ</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 8 }}>
-          <label>氏名</label>
-          <br />
-          <input value={name} onChange={(e) => setName(e.target.value)} />
+    <div className="w-full px-4 py-10">
+      <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
+        <div className="card-body">
+          <h1 className="card-title text-2xl">サインアップ</h1>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <label className="form-control w-full">
+              <div className="label"><span className="label-text">氏名</span></div>
+              <input className="input input-bordered w-full" value={name} onChange={(e) => setName(e.target.value)} />
+            </label>
+
+            <label className="form-control w-full">
+              <div className="label"><span className="label-text">メールアドレス</span></div>
+              <input className="input input-bordered w-full" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </label>
+
+            <label className="form-control w-full">
+              <div className="label"><span className="label-text">パスワード</span></div>
+              <input className="input input-bordered w-full" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </label>
+
+            <button className="btn btn-primary" type="submit">サインアップ</button>
+          </form>
+
+          {status ? <div className="alert alert-info text-sm">{status}</div> : null}
         </div>
-        <div style={{ marginBottom: 8 }}>
-          <label>メールアドレス</label>
-          <br />
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </div>
-        {/* guardianEmail removed: will be requested from applicant dashboard */}
-        <div style={{ marginBottom: 8 }}>
-          <label>パスワード</label>
-          <br />
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        </div>
-        <button type="submit">サインアップ</button>
-      </form>
-      <p>{status}</p>
+      </div>
     </div>
   )
 }

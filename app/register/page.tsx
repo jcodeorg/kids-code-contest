@@ -29,30 +29,32 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
-      <h1>ユーザー登録</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 8 }}>
-          <label>お子様氏名（任意）</label>
-          <br />
-          <input value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
+    <div className="w-full px-4 py-10">
+      <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
+        <div className="card-body">
+          <h1 className="card-title text-2xl">ユーザー登録</h1>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <label className="form-control w-full">
+              <div className="label"><span className="label-text">お子様氏名（任意）</span></div>
+              <input className="input input-bordered w-full" value={name} onChange={(e) => setName(e.target.value)} />
+            </label>
 
-        <div style={{ marginBottom: 8 }}>
-          <label>お子様のメールアドレス</label>
-          <br />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </div>
+            <label className="form-control w-full">
+              <div className="label"><span className="label-text">お子様のメールアドレス</span></div>
+              <input className="input input-bordered w-full" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </label>
 
-        <div style={{ marginBottom: 8 }}>
-          <label>保護者のメールアドレス</label>
-          <br />
-          <input value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} required />
-        </div>
+            <label className="form-control w-full">
+              <div className="label"><span className="label-text">保護者のメールアドレス</span></div>
+              <input className="input input-bordered w-full" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} required />
+            </label>
 
-        <button type="submit">登録して保護者へ同意メールを送る</button>
-      </form>
-      <p>{status}</p>
+            <button className="btn btn-primary" type="submit">登録して保護者へ同意メールを送る</button>
+          </form>
+
+          {status ? <div className="alert alert-info text-sm">{status}</div> : null}
+        </div>
+      </div>
     </div>
   )
 }

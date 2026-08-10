@@ -13,9 +13,13 @@ export default async function Page({ searchParams }: Props) {
   const token = params?.token
   if (!token) {
     return (
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
-        <h1>保護者同意ページ</h1>
-        <p>トークンが指定されていません。</p>
+      <div className="w-full px-4 py-10">
+        <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
+          <div className="card-body">
+            <h1 className="card-title text-2xl">保護者同意ページ</h1>
+            <div className="alert alert-warning">トークンが指定されていません。</div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -30,24 +34,32 @@ export default async function Page({ searchParams }: Props) {
 
   if (error || !data) {
     return (
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
-        <h1>保護者同意ページ</h1>
-        <p>無効なトークンか、該当する登録が見つかりませんでした。</p>
+      <div className="w-full px-4 py-10">
+        <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
+          <div className="card-body">
+            <h1 className="card-title text-2xl">保護者同意ページ</h1>
+            <div className="alert alert-error">無効なトークンか、該当する登録が見つかりませんでした。</div>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto', padding: 16 }}>
-      <h1>保護者同意ページ</h1>
-      <p>
-        以下の内容で同意しますか？ <br />
-        お子様: {data.name} <br />
-        応募者メール: {data.email} <br />
-        保護者通知先: {data.guardian_email}
-      </p>
+    <div className="w-full px-4 py-10">
+      <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
+        <div className="card-body gap-5">
+          <h1 className="card-title text-2xl">保護者同意ページ</h1>
+          <div className="bg-base-200 rounded-box p-4 text-sm leading-relaxed">
+            <p>以下の内容で同意しますか？</p>
+            <p className="mt-2">お子様: <strong>{data.name}</strong></p>
+            <p>応募者メール: <strong>{data.email}</strong></p>
+            <p>保護者通知先: <strong>{data.guardian_email}</strong></p>
+          </div>
 
-      <ApproveClient token={token} initialStatus={data.guardian_consent} />
+          <ApproveClient token={token} initialStatus={data.guardian_consent} />
+        </div>
+      </div>
     </div>
   )
 }

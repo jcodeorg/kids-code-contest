@@ -22,12 +22,13 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
   const title = titleMap[role] || `${role} ダッシュボード`
 
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', padding: 16 }}>
-      <h1>{title}</h1>
+    <div className="w-full px-4 py-8">
+      <div className="max-w-6xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">{title}</h1>
       <SignOutClient role={role} />
       {role === 'admin' ? (
         <>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>admin</div>
+          <div className="badge badge-primary badge-outline mb-3">admin</div>
           <AdminPanel />
         </>
       ) : (
@@ -35,17 +36,24 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
           {role === 'applicant' ? (
             <>
               <ApplicantGuardianPanel />
-              <p>ここは <strong>{role}</strong> 向けのダッシュボードです。</p>
-              <p>必要なウィジェットやリンクをここに追加してください。</p>
+              <div className="card bg-base-100 shadow-md border border-base-200">
+                <div className="card-body">
+                  <p>ここは <strong>{role}</strong> 向けのダッシュボードです。</p>
+                  <p className="text-base-content/70">必要なウィジェットやリンクをここに追加してください。</p>
+                </div>
+              </div>
             </>
           ) : (
-            <>
+            <div className="card bg-base-100 shadow-md border border-base-200">
+              <div className="card-body">
               <p>ここは <strong>{role}</strong> 向けのダッシュボードです。</p>
-              <p>必要なウィジェットやリンクをここに追加してください。</p>
-            </>
+              <p className="text-base-content/70">必要なウィジェットやリンクをここに追加してください。</p>
+              </div>
+            </div>
           )}
         </>
       )}
+      </div>
     </div>
   )
 }

@@ -31,12 +31,12 @@ export default function ApproveClient({ token, initialStatus }: { token: string;
   }
 
   return (
-    <div>
-      <p>現在のステータス: {status}</p>
-      <button onClick={approve} disabled={loading || status === 'approved'}>
+    <div className="space-y-3">
+      <p className="text-sm">現在のステータス: <strong>{status || 'pending'}</strong></p>
+      <button className="btn btn-primary" onClick={approve} disabled={loading || status === 'approved'}>
         {status === 'approved' ? '同意済み' : '同意する'}
       </button>
-      <p>{message}</p>
+      {message ? <div className="alert alert-info text-sm">{message}</div> : null}
     </div>
   )
 }
