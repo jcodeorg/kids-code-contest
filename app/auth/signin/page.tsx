@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase/client'
 
@@ -105,6 +106,9 @@ function SignInPageContent() {
         </div>
         <button type="submit">サインイン</button>
       </form>
+      <p style={{ marginTop: 8 }}>
+        はじめての方は <Link href="/auth/signup">メールでサインアップ</Link>
+      </p>
       <div style={{ marginTop: 12 }}>
         <button onClick={signInWithGoogle}>Googleでサインイン</button>
       </div>

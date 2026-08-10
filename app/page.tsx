@@ -8,8 +8,6 @@ import { supabase } from '../lib/supabase/client'
 export default function Home() {
   const router = useRouter()
   const [status, setStatus] = useState('')
-  const [siEmail, setSiEmail] = useState('')
-  const [siPassword, setSiPassword] = useState('')
   const [signedIn, setSignedIn] = useState(false)
 
   useEffect(() => {
@@ -19,13 +17,15 @@ export default function Home() {
         const user = r?.data?.user
         if (user) {
           setSignedIn(true)
+          // show a concise signed-in message and do not navigate away
           try {
-            const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
-            const role = profile?.role || 'applicant'
-            router.push(`/dashboard/${role}`)
+            const provider = user?.app_metadata?.provider || (user?.app_metadata?.providers && user.app_metadata.providers[0]) || (user?.identities && user.identities[0]?.provider)
+            const display = provider ? `${provider}でサインイン中` : `${user.email || 'サインイン中'}でサインイン中`
+            setStatus(display)
             return
           } catch (e) {
-            // ignore and stay
+            setStatus(`${user.email || 'サインイン中'}でサインイン中`)
+            return
           }
         }
       } catch (e) {
@@ -52,30 +52,6 @@ export default function Home() {
     }
   }
 
-  async function handleEmailSignIn(e: React.FormEvent) {
-    e.preventDefault()
-    setStatus('サインイン中...')
-    try {
-      const res: any = await supabase.auth.signInWithPassword({ email: siEmail, password: siPassword } as any)
-      if (res.error) {
-        setStatus('エラー: ' + res.error.message)
-        return
-      }
-      // on success, redirect to dashboard based on role
-      const userRes: any = await supabase.auth.getUser()
-      const user = userRes?.data?.user
-      if (user?.email) {
-        const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
-        const role = profile?.role || 'applicant'
-        router.push(`/dashboard/${role}`)
-        return
-      }
-      router.push('/dashboard/applicant')
-    } catch (err) {
-      setStatus('サインイン失敗')
-    }
-  }
-
   async function handleSignOut() {
     setStatus('サインアウト中...')
     try {
@@ -91,35 +67,21 @@ export default function Home() {
     <main style={{ maxWidth: 640, margin: '0 auto', padding: 24 }}>
       <h1>北区こどもプログラミングコンテスト</h1>
 
-      {signedIn && (
+      {signedIn ? (
         <div style={{ marginBottom: 12 }}>
           <button onClick={handleSignOut}>サインアウト</button>
         </div>
+      ) : (
+        <>
+          <section style={{ marginBottom: 20 }}>
+            <button onClick={signInWithGoogle}>Googleではじめる</button>
+          </section>
+
+          <section style={{ marginBottom: 20 }}>
+            <button onClick={() => router.push('/auth/signin')}>メールでサインイン</button>
+          </section>
+        </>
       )}
-
-      <section style={{ marginBottom: 20 }}>
-        <button onClick={signInWithGoogle}>Google で続行</button>
-      </section>
-
-      <section style={{ marginBottom: 20 }}>
-        <form onSubmit={handleEmailSignIn}>
-          <div style={{ marginBottom: 8 }}>
-            <label>メール</label>
-            <br />
-            <input type="email" value={siEmail} onChange={(e) => setSiEmail(e.target.value)} required />
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <label>パスワード</label>
-            <br />
-            <input type="password" value={siPassword} onChange={(e) => setSiPassword(e.target.value)} required />
-          </div>
-          <button type="submit">サインイン</button>
-        </form>
-      </section>
-
-      <section>
-        <button onClick={() => router.push('/auth/signup')}>メールで新規登録</button>
-      </section>
 
       <p style={{ marginTop: 16 }}>{status}</p>
     </main>
