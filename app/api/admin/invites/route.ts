@@ -17,6 +17,83 @@ export async function POST(req: Request) {
     const { target_role, max_uses, expires_in_hours } = body
     if (!target_role) return NextResponse.json({ error: 'target_role required' }, { status: 400 })
 
+    // derive creator from Authorization bearer token (server-side determination)
+    const authHeader = (req.headers.get('authorization') || '')
+    const accessToken = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null
+    if (!accessToken) return NextResponse.json({ error: 'authorization token required' }, { status: 401 })
+
+    // decode JWT payload (no signature verification here) to extract sub (user id)
+    let created_by_user_id: string | null = null
+    try {
+      const parts = accessToken.split('.')
+      if (parts.length >= 2) {
+        const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'))
+        created_by_user_id = payload?.sub || payload?.user_id || null
+      }
+    } catch (e) {
+      console.warn('[invites] failed to decode token payload', e)
+    }
+
+    if (!created_by_user_id) return NextResponse.json({ error: 'could not determine creator from token' }, { status: 401 })
+
+    // resolvedCreatorId: the user_id we will store on the invite (may differ from provided id if email exists)
+    let resolvedCreatorId = created_by_user_id
+
+    // ensure the creator exists in our `users` table; if not, try to create a minimal profile
+    const { data: existingCreator, error: creatorErr } = await supabaseAdmin.from('users').select('*').eq('user_id', created_by_user_id).limit(1)
+    if (creatorErr) return NextResponse.json({ error: creatorErr.message }, { status: 500 })
+    if (!Array.isArray(existingCreator) || existingCreator.length === 0) {
+      // try to look up the auth user via admin API
+      try {
+        const { data: adminList, error: listErr } = await supabaseAdmin.auth.admin.listUsers()
+        if (listErr) {
+          console.warn('[invites] failed to list auth users:', listErr.message)
+          return NextResponse.json({ error: 'creator not found in users table and auth lookup failed' }, { status: 400 })
+        }
+        const authUser = adminList?.users?.find((u: any) => u.id === created_by_user_id || u.user_id === created_by_user_id)
+        if (!authUser) {
+          return NextResponse.json({ error: 'creator not found' }, { status: 400 })
+        }
+
+        const creatorEmail = authUser.email || null
+        const creatorName = authUser.user_metadata?.name || authUser.user_metadata?.full_name || '管理者'
+
+        // Attempt to insert a minimal profile with the auth user_id. If the email already exists, fall back
+        // to use the existing row's user_id so we don't violate unique email constraint.
+        const { data: createdCreator, error: createProfileErr } = await supabaseAdmin
+          .from('users')
+          .insert({ user_id: created_by_user_id, email: creatorEmail, name: creatorName, role: 'admin', is_active: true })
+          .select()
+          .single()
+
+        if (createProfileErr) {
+          const isDuplicateEmail = /duplicate|already exists|violat/i.test(createProfileErr.message)
+          if (isDuplicateEmail && creatorEmail) {
+            // find existing by email and use its user_id
+            const { data: existingByEmail, error: findErr } = await supabaseAdmin.from('users').select('*').eq('email', creatorEmail).limit(1)
+            if (findErr) {
+              console.warn('[invites] failed to lookup existing user by email after duplicate error:', findErr.message)
+              return NextResponse.json({ error: createProfileErr.message }, { status: 500 })
+            }
+            if (Array.isArray(existingByEmail) && existingByEmail.length > 0) {
+              resolvedCreatorId = existingByEmail[0].user_id
+            } else {
+              console.warn('[invites] duplicate email but could not find existing row')
+              return NextResponse.json({ error: createProfileErr.message }, { status: 500 })
+            }
+          } else {
+            console.warn('[invites] failed to create creator profile:', createProfileErr.message)
+            return NextResponse.json({ error: createProfileErr.message }, { status: 500 })
+          }
+        } else {
+          resolvedCreatorId = createdCreator.user_id
+        }
+      } catch (e: any) {
+        console.warn('[invites] exception while ensuring creator:', String(e))
+        return NextResponse.json({ error: 'failed to ensure creator exists' }, { status: 500 })
+      }
+    }
+
     const token = crypto.randomUUID()
     const now = new Date()
     const hours = Number(expires_in_hours || 24)
@@ -24,7 +101,7 @@ export async function POST(req: Request) {
 
     const { data, error } = await supabaseAdmin
       .from('invites')
-      .insert({ token, target_role, max_uses: max_uses ?? 1, use_count: 0, status: 'active', expires_at })
+      .insert({ token, target_role, max_uses: max_uses ?? 1, use_count: 0, status: 'active', expires_at, created_by_user_id: resolvedCreatorId })
       .select()
       .single()
 

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { supabase } from '../../../lib/supabase/client'
 
 type User = {
   user_id: string
@@ -79,15 +80,21 @@ export default function AdminPanel() {
           <button onClick={async () => {
             setCreatingInvite(true)
             try {
-              const res = await fetch('/api/admin/invites', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_role: invRole, max_uses: invMaxUses === '' ? null : invMaxUses, expires_in_hours: invExpiresHours }) })
+              const sess: any = await supabase.auth.getSession()
+              const accessToken = sess?.data?.session?.access_token || null
+
+              const headers: any = { 'Content-Type': 'application/json' }
+              if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+
+              const res = await fetch('/api/admin/invites', { method: 'POST', headers, body: JSON.stringify({ target_role: invRole, max_uses: invMaxUses === '' ? null : invMaxUses, expires_in_hours: invExpiresHours }) })
               const d = await res.json()
               if (!res.ok) {
                 alert('作成失敗: ' + (d?.error || res.status))
                 return
               }
-              const token = d.invite?.token
+              const inviteToken = d.invite?.token
               const base = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-              const url = `${base.replace(/\/$/, '')}/invite?token=${token}`
+              const url = `${base.replace(/\/$/, '')}/invite?token=${inviteToken}`
               await navigator.clipboard?.writeText(url)
               alert('招待リンクを作成しコピーしました: ' + url)
               fetchInvites()
