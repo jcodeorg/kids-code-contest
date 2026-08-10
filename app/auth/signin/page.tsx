@@ -22,7 +22,8 @@ function SignInPageContent() {
         options: {
           redirectTo,
           flowType: 'pkce',
-          queryParams: { access_type: 'offline', prompt: 'consent' },
+          // Avoid forcing Google consent/account confirmation every time.
+          queryParams: { access_type: 'online' },
         },
       } as any)
       // OAuth redirects to provider; no further action here

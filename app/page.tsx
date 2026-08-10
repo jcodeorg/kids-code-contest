@@ -51,7 +51,8 @@ export default function Home() {
         options: {
           redirectTo,
           flowType: 'pkce',
-          queryParams: { access_type: 'offline', prompt: 'consent' },
+          // Avoid forcing Google consent/account confirmation every time.
+          queryParams: { access_type: 'online' },
         },
       } as any)
     } catch (e: any) {
