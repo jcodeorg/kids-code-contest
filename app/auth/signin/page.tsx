@@ -15,7 +15,7 @@ function SignInPageContent() {
   async function signInWithGoogle() {
     setStatus('Googleでサインイン中...')
     try {
-      const redirectTo = `${window.location.origin}/auth/callback`
+      const redirectTo = inviteToken ? `${window.location.origin}/auth/callback?token=${encodeURIComponent(inviteToken)}` : `${window.location.origin}/auth/callback`
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -45,7 +45,7 @@ function SignInPageContent() {
         // profile missing — create it server-side
         try {
           const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
-          await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email: user.email }) })
+          await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email: user.email, inviteToken }) })
         } catch (err) {
           // ignore
         }

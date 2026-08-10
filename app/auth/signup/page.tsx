@@ -71,7 +71,7 @@ function SignUpPageContent() {
             // create profile for OAuth users
             try {
               const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
-              await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email: user.email }) })
+              await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email: user.email, inviteToken }) })
             } catch (e) {
               // ignore
             }

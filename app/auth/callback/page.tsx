@@ -36,12 +36,15 @@ export default function AuthCallbackPage() {
         }
 
         const user = session?.user
+        const inviteToken = params.get('token')
         if (user?.email) {
           try {
+            const body: any = { name: user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0], email: user.email, authProvider: 'google' }
+            if (inviteToken) body.inviteToken = inviteToken
             await fetch('/api/register', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0], email: user.email, authProvider: 'google' }),
+              body: JSON.stringify(body),
             })
           } catch (e) {
             // ignore and continue
