@@ -1,16 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase/client'
-import { useSearchParams } from 'next/navigation'
 
-export default function SignUpPage() {
+function SignUpPageContent() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  
+
   const [status, setStatus] = useState('')
   const searchParams = useSearchParams()
   const inviteToken = searchParams?.get('token') || ''
@@ -111,5 +110,13 @@ export default function SignUpPage() {
       </form>
       <p>{status}</p>
     </div>
+  )
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24 }}>読み込み中...</div>}>
+      <SignUpPageContent />
+    </Suspense>
   )
 }

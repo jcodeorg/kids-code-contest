@@ -38,7 +38,15 @@ export default function Home() {
   async function signInWithGoogle() {
     setStatus('Google にリダイレクトしています...')
     try {
-      await supabase.auth.signInWithOAuth({ provider: 'google' } as any)
+      const redirectTo = `${window.location.origin}/auth/callback`
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          flowType: 'pkce',
+          queryParams: { access_type: 'offline', prompt: 'consent' },
+        },
+      } as any)
     } catch (e: any) {
       setStatus('OAuth エラー: ' + (e?.message || String(e)))
     }

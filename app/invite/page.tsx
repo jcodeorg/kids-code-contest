@@ -1,9 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 
-export default function InviteLanding() {
+function InviteLandingContent() {
   const params = useSearchParams()
   const token = params?.get('token') || ''
   const router = useRouter()
@@ -23,5 +23,13 @@ export default function InviteLanding() {
         <p>招待トークンが無効です。</p>
       )}
     </div>
+  )
+}
+
+export default function InviteLanding() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24 }}>読み込み中...</div>}>
+      <InviteLandingContent />
+    </Suspense>
   )
 }

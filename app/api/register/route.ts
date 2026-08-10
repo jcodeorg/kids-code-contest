@@ -1,16 +1,58 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../lib/supabase/server'
 import { Resend } from 'resend'
+import { randomUUID } from 'crypto'
 
 const resend = new Resend(process.env.RESEND_API_KEY as string)
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { name, email, guardianEmail, inviteToken } = body
+    const { name, email, guardianEmail, inviteToken, authProvider } = body
     if (!email) {
       return NextResponse.json({ error: 'email is required' }, { status: 400 })
     }
+
+    const safeName = (typeof name === 'string' && name.trim()) ? name.trim() : (typeof email === 'string' ? email.split('@')[0] : 'ユーザー')
+    const safeGuardianEmail = typeof guardianEmail === 'string' ? guardianEmail.trim() : ''
+    const safeAuthProvider = typeof authProvider === 'string' && authProvider ? authProvider : 'email'
+
+    const ensureAuthUser = async () => {
+      try {
+        const { data: { users }, error: listErr } = await supabaseAdmin.auth.admin.listUsers()
+        if (!listErr) {
+          const existing = users.find((u: any) => u.email === email)
+          if (existing) {
+            return existing
+          }
+        }
+
+        const password = randomUUID()
+        const { data, error } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            name: safeName,
+            auth_provider: safeAuthProvider,
+          },
+          app_metadata: {
+            auth_provider: safeAuthProvider,
+          },
+        })
+
+        if (error) {
+          console.warn('[register] auth user create failed:', error.message)
+          return null
+        }
+        return data.user
+      } catch (e) {
+        console.warn('[register] ensureAuthUser exception:', e)
+        return null
+      }
+    }
+
+    await ensureAuthUser()
 
     // check existing user by email to avoid unique constraint violation
     const { data: existingRows, error: fetchErr } = await supabaseAdmin
@@ -33,9 +75,11 @@ export async function POST(req: Request) {
       const { data: updated, error: updateErr } = await supabaseAdmin
         .from('users')
         .update({
-          guardian_email: guardianEmail || null,
+          name: safeName,
+          guardian_email: safeGuardianEmail || null,
           guardian_consent: 'pending',
           guardian_consent_token: token,
+          auth_provider: safeAuthProvider,
         })
         .eq('user_id', existing.user_id)
         .select()
@@ -49,9 +93,10 @@ export async function POST(req: Request) {
       const { data, error } = await supabaseAdmin
         .from('users')
         .insert({
-          name: name || null,
+          name: safeName,
           email,
-          guardian_email: guardianEmail || null,
+          auth_provider: safeAuthProvider,
+          guardian_email: safeGuardianEmail || null,
           guardian_consent: 'pending',
           guardian_consent_token: token,
         })
@@ -59,9 +104,46 @@ export async function POST(req: Request) {
         .single()
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        const isDuplicate = error.code === '23505' || /duplicate|already exists|violat/i.test(error.message)
+        if (!isDuplicate) {
+          return NextResponse.json({ error: error.message }, { status: 500 })
+        }
+
+        const { data: existingAfterInsert, error: refetchErr } = await supabaseAdmin
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .limit(1)
+
+        if (refetchErr) {
+          return NextResponse.json({ error: refetchErr.message }, { status: 500 })
+        }
+
+        if (Array.isArray(existingAfterInsert) && existingAfterInsert.length > 0) {
+          const existing = existingAfterInsert[0]
+          const { data: updated, error: updateErr } = await supabaseAdmin
+            .from('users')
+            .update({
+              name: safeName,
+              guardian_email: safeGuardianEmail || null,
+              guardian_consent: 'pending',
+              guardian_consent_token: token,
+              auth_provider: safeAuthProvider,
+            })
+            .eq('user_id', existing.user_id)
+            .select()
+            .single()
+
+          if (updateErr) {
+            return NextResponse.json({ error: updateErr.message }, { status: 500 })
+          }
+          userRecord = updated
+        } else {
+          return NextResponse.json({ error: error.message }, { status: 500 })
+        }
+      } else {
+        userRecord = data
       }
-      userRecord = data
     }
 
     // If inviteToken provided, validate and apply role
@@ -113,11 +195,11 @@ export async function POST(req: Request) {
     }
 
     // send guardian consent email only when guardianEmail provided
-    if (guardianEmail) {
+    if (safeGuardianEmail) {
       try {
         await resend.emails.send({
           from: fromAddress,
-          to: guardianEmail,
+          to: safeGuardianEmail,
           subject: '【要同意】保護者同意のお願い - キッズプログラミングコンテスト',
           html: `
         <p>保護者様</p>
@@ -132,7 +214,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, user: userRecord, guardianEmailSent: Boolean(guardianEmail) })
+    return NextResponse.json({ ok: true, user: userRecord, guardianEmailSent: Boolean(safeGuardianEmail) })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }

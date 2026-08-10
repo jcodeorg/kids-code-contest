@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase/client'
-import { useSearchParams } from 'next/navigation'
 
-export default function SignInPage() {
+function SignInPageContent() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -16,7 +15,15 @@ export default function SignInPage() {
   async function signInWithGoogle() {
     setStatus('Googleでサインイン中...')
     try {
-      await supabase.auth.signInWithOAuth({ provider: 'google' } as any)
+      const redirectTo = `${window.location.origin}/auth/callback`
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          flowType: 'pkce',
+          queryParams: { access_type: 'offline', prompt: 'consent' },
+        },
+      } as any)
       // OAuth redirects to provider; no further action here
     } catch (err: any) {
       setStatus('OAuth エラー: ' + (err?.message || String(err)))
@@ -103,5 +110,13 @@ export default function SignInPage() {
       </div>
       <p>{status}</p>
     </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24 }}>読み込み中...</div>}>
+      <SignInPageContent />
+    </Suspense>
   )
 }
