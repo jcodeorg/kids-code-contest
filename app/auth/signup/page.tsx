@@ -18,6 +18,22 @@ function SignUpPageContent() {
     e.preventDefault()
     setStatus('送信中...')
     try {
+      setStatus('登録状況を確認中...')
+      const checkRes = await fetch('/api/auth/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const checkData = await checkRes.json()
+      if (!checkRes.ok) {
+        setStatus('確認処理でエラー: ' + (checkData?.error || checkRes.status))
+        return
+      }
+      if (checkData?.exists) {
+        setStatus('サインアップは既に行われているか、何か問題がある可能性があります。保護者の方で登録状況をご確認ください。')
+        return
+      }
+
       setStatus('ユーザー作成中...')
       const res = await supabase.auth.signUp({
         email,
@@ -27,6 +43,33 @@ function SignUpPageContent() {
 
       if (res.error) {
         setStatus('エラー: ' + res.error.message)
+        return
+      }
+
+      const signUpData = (res as any)?.data || {}
+      const user = signUpData.user
+      const session = signUpData.session
+      const identities = user?.identities || []
+
+      // Supabase client response does not expose strict delivery status.
+      // Use conservative heuristics to avoid false "登録完了" for already-signed-up users.
+      const now = Date.now()
+      const parseTime = (value: any) => {
+        if (!value) return null
+        const t = new Date(value).getTime()
+        return Number.isFinite(t) ? t : null
+      }
+      const confirmationSentAt = parseTime(user?.confirmation_sent_at)
+      const createdAt = parseTime(user?.created_at)
+      const hasConfirmedEmail = Boolean(user?.email_confirmed_at)
+      const sentRecently = confirmationSentAt !== null && Math.abs(now - confirmationSentAt) <= 3 * 60 * 1000
+      const createdRecently = createdAt !== null && Math.abs(now - createdAt) <= 3 * 60 * 1000
+      const hasRealIdentity = Array.isArray(identities) && identities.length > 0
+
+      const isConfirmationMailFlow = Boolean(user) && !session && !hasConfirmedEmail && sentRecently && (hasRealIdentity || createdRecently)
+
+      if (!isConfirmationMailFlow) {
+        setStatus('サインアップは既に行われているか、何か問題がある可能性があります。保護者の方で登録状況をご確認ください。')
         return
       }
 
