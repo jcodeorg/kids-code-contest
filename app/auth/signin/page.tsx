@@ -32,6 +32,8 @@ function SignInPageContent() {
     }
   }
 
+  // No global Enter handler here: let the form submit on Enter (メールでサインイン)
+
   async function fetchRoleAndRedirect() {
     try {
       const userRes: any = await supabase.auth.getUser()
@@ -100,7 +102,7 @@ function SignInPageContent() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <label className="form-control w-full">
               <div className="label"><span className="label-text">メールアドレス</span></div>
-              <input className="input input-bordered w-full" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <input autoFocus className="input input-bordered w-full" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </label>
 
             <label className="form-control w-full">
@@ -109,8 +111,13 @@ function SignInPageContent() {
             </label>
 
             <div className="flex flex-col gap-3">
-              <button className="btn btn-primary w-full" type="submit">サインイン</button>
-              <button className="btn btn-outline w-full flex items-center justify-center gap-2" type="button" onClick={signInWithGoogle}>
+              <button className="btn btn-primary w-full flex items-center justify-center gap-2" type="submit">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="h-5 w-5" aria-hidden="true" focusable="false">
+                  <path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span>メールでサインイン</span>
+              </button>
+              <button className="btn w-full flex items-center justify-center gap-2 bg-white text-black border transition-transform duration-150 hover:scale-105 hover:shadow-md active:scale-100" type="button" onClick={signInWithGoogle}>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 533.5 544.3" className="h-5 w-5" aria-hidden="true" focusable="false">
                   <path fill="#4285F4" d="M533.5 278.4c0-17.4-1.6-34.1-4.7-50.4H272v95.3h147.1c-6.3 34-25 62.8-53.3 82v68.1h85.9c50.4-46.5 80.8-114.7 80.8-195z"/>
                   <path fill="#34A853" d="M272 544.3c72.6 0 133.6-24.1 178.1-65.6l-85.9-68.1c-23.9 16-54.4 25.6-92.2 25.6-70.8 0-130.7-47.8-152-112.2H34.9v70.6C79.4 486.3 167.3 544.3 272 544.3z"/>
@@ -122,9 +129,13 @@ function SignInPageContent() {
             </div>
           </form>
 
+          <p className="text-sm text-base-content/80 mt-2">できるだけ「Google でサインイン」を使おう。そっちのほうがかんたんだよ。Googleを使えない人だけ、メールアドレスでサインインしてね。</p>
+
           <p className="text-sm">
             はじめての方は <Link className="link link-primary" href="/auth/signup">メールでサインアップ</Link>
           </p>
+
+          <p className="text-xs mt-2"><Link className="link" href="/">トップページに戻る</Link></p>
 
           {status ? <div className="alert alert-info text-sm">{status}</div> : null}
         </div>
