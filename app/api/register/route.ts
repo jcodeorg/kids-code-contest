@@ -8,12 +8,15 @@ const resend = new Resend(process.env.RESEND_API_KEY as string)
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { name, email, guardianEmail, inviteToken, authProvider } = body
+    const { name, nameKana, schoolName, grade, email, guardianEmail, inviteToken, authProvider } = body
     if (!email) {
       return NextResponse.json({ error: 'email is required' }, { status: 400 })
     }
 
     const safeName = (typeof name === 'string' && name.trim()) ? name.trim() : (typeof email === 'string' ? email.split('@')[0] : 'ユーザー')
+    const safeNameKana = (typeof nameKana === 'string' && nameKana.trim()) ? nameKana.trim() : null
+    const safeSchoolName = (typeof schoolName === 'string' && schoolName.trim()) ? schoolName.trim() : null
+    const safeGrade = (typeof grade === 'string' && grade.trim()) ? grade.trim() : null
     const safeGuardianEmail = typeof guardianEmail === 'string' ? guardianEmail.trim() : ''
     const safeAuthProvider = typeof authProvider === 'string' && authProvider ? authProvider : 'email'
 
@@ -76,6 +79,9 @@ export async function POST(req: Request) {
         .from('users')
         .update({
           name: safeName,
+          name_kana: safeNameKana,
+          school_name: safeSchoolName,
+          grade: safeGrade,
           guardian_email: safeGuardianEmail || null,
           guardian_consent: 'pending',
           guardian_consent_token: token,
@@ -95,6 +101,9 @@ export async function POST(req: Request) {
         .insert({
           user_id: authUser?.id || undefined,
           name: safeName,
+          name_kana: safeNameKana,
+          school_name: safeSchoolName,
+          grade: safeGrade,
           email,
           auth_provider: safeAuthProvider,
           guardian_email: safeGuardianEmail || null,
@@ -126,6 +135,9 @@ export async function POST(req: Request) {
             .from('users')
             .update({
               name: safeName,
+              name_kana: safeNameKana,
+              school_name: safeSchoolName,
+              grade: safeGrade,
               guardian_email: safeGuardianEmail || null,
               guardian_consent: 'pending',
               guardian_consent_token: token,
