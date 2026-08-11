@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase/client'
@@ -150,6 +151,8 @@ function SignUpPageContent() {
 
             <button className="btn btn-primary" type="submit">サインアップ</button>
           </form>
+
+          <p className="text-sm">パスワードを忘れた方は <Link className="link link-primary" href="/auth/forgot-password">こちらから再設定</Link></p>
 
           {status ? <div className="alert alert-info text-sm">{status}</div> : null}
         </div>
