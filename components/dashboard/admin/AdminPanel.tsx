@@ -61,7 +61,7 @@ export default function AdminPanel() {
 
   function editUser(user_id: string) {
     // navigate to edit page
-    window.location.href = `/dashboard/admin/user/${user_id}`
+    window.location.href = `/admin/user/${user_id}`
   }
 
   return (

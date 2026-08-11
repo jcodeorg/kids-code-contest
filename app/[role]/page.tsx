@@ -1,6 +1,6 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
-import DashboardShellClient from '../dashboard/DashboardShellClient'
+import DashboardShellClient from '../../components/dashboard/DashboardShellClient'
 import { createSupabaseServerClient } from '../../lib/supabase/server-client'
 
 export default async function RoleDashboard({ params }: { params: Promise<{ role?: string }> | { role?: string } }) {

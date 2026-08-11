@@ -26,8 +26,8 @@ export default function EditUserPage() {
           setUser(d.user)
           setRole(d.user.role)
           setIsActive(Boolean(d.user.is_active))
-            setName(d.user.name || '')
-            setNameKana(d.user.name_kana || '')
+          setName(d.user.name || '')
+          setNameKana(d.user.name_kana || '')
         }
       } catch (e) {
         // ignore
@@ -48,7 +48,7 @@ export default function EditUserPage() {
         alert('更新失敗: ' + (d?.error || res.status))
         return
       }
-      router.push('/dashboard/admin')
+      router.push('/admin')
     } catch (e: any) {
       alert('更新に失敗しました: ' + (e?.message || e))
     } finally {
@@ -57,7 +57,7 @@ export default function EditUserPage() {
   }
 
   function handleCancel() {
-    router.push('/dashboard/admin')
+    router.push('/admin')
   }
 
   if (loading) return <div className="max-w-2xl mx-auto alert alert-info">読み込み中...</div>
@@ -114,7 +114,7 @@ export default function EditUserPage() {
                       alert('削除に失敗しました: ' + (d?.error || res.status))
                       return
                     }
-                    router.push('/dashboard/admin')
+                    router.push('/admin')
                   } catch (e: any) {
                     alert('削除に失敗しました: ' + (e?.message || String(e)))
                   } finally {
