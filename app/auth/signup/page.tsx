@@ -153,6 +153,7 @@ function SignUpPageContent() {
           </form>
 
           <p className="text-sm">パスワードを忘れた方は <Link className="link link-primary" href="/auth/forgot-password">こちらから再設定</Link></p>
+          <p className="text-xs"><Link className="link" href="/">トップページに戻る</Link></p>
 
           {status ? <div className="alert alert-info text-sm">{status}</div> : null}
         </div>
