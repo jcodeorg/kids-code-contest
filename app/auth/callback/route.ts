@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   // Resolve role for direct dashboard redirect.
   let role = 'applicant'
   try {
-    const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
+    const { data: profile } = await supabase.from('users').select('role').eq('user_id', user.id).single()
     role = profile?.role || 'applicant'
   } catch {
     role = 'applicant'

@@ -28,7 +28,7 @@ export default function Home() {
           }
           // try to load role from profile; default to applicant
           try {
-            const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
+            const { data: profile } = await supabase.from('users').select('role').eq('user_id', user.id).single()
             setRole(profile?.role || 'applicant')
           } catch (err) {
             setRole('applicant')

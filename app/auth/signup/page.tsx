@@ -60,7 +60,7 @@ function SignUpPageContent() {
         const user = userRes?.data?.user
         if (user?.email) {
           try {
-            const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
+            const { data: profile } = await supabase.from('users').select('role').eq('user_id', user.id).single()
             const role = profile?.role || 'applicant'
             router.push(`/${role}`)
             return

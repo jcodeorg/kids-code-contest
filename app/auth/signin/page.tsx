@@ -39,7 +39,7 @@ function SignInPageContent() {
       if (!user?.email) return
       // try to read profile; if missing, create via server API (handles OAuth signups)
       try {
-        const { data: profile } = await supabase.from('users').select('role').eq('email', user.email).single()
+        const { data: profile } = await supabase.from('users').select('role').eq('user_id', user.id).single()
         const role = profile?.role || 'applicant'
         router.push(`/${role}`)
         return

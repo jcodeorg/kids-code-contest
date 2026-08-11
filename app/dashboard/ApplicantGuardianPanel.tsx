@@ -19,7 +19,7 @@ export default function ApplicantGuardianPanel() {
         setProfile(null)
         return
       }
-      const { data } = await supabase.from('users').select('user_id,name,email,guardian_email,guardian_consent,guardian_consent_at').eq('email', user.email).single()
+      const { data } = await supabase.from('users').select('user_id,name,email,guardian_email,guardian_consent,guardian_consent_at').eq('user_id', user.id).single()
       setProfile(data)
     } catch (e) {
       // ignore

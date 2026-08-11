@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       }
     }
 
-    await ensureAuthUser()
+    const authUser = await ensureAuthUser()
 
     // check existing user by email to avoid unique constraint violation
     const { data: existingRows, error: fetchErr } = await supabaseAdmin
@@ -93,6 +93,7 @@ export async function POST(req: Request) {
       const { data, error } = await supabaseAdmin
         .from('users')
         .insert({
+          user_id: authUser?.id || undefined,
           name: safeName,
           email,
           auth_provider: safeAuthProvider,

@@ -15,8 +15,21 @@ export default async function RoleDashboard({ params }: { params: Promise<{ role
     redirect('/auth/signin')
   }
 
-  // read profile role from public users table
-  const { data: profile, error: profileErr } = await supabase.from('users').select('role').eq('email', user.email).limit(1).single()
+  // Prefer auth UID based lookup for safer RLS compatibility.
+  let profile: { role?: string } | null = null
+  let profileErr: any = null
+
+  const byUserId = await supabase.from('users').select('role').eq('user_id', user.id).limit(1).maybeSingle()
+  profile = byUserId.data
+  profileErr = byUserId.error
+
+  // Backward compatibility for legacy rows not yet aligned to auth uid.
+  if (!profile && user.email) {
+    const byEmail = await supabase.from('users').select('role').eq('email', user.email).limit(1).maybeSingle()
+    profile = byEmail.data
+    profileErr = byEmail.error
+  }
+
   if (profileErr || !profile) {
     return (
       <div className="w-full px-4 py-10">

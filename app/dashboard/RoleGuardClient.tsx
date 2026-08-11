@@ -25,7 +25,7 @@ export default function RoleGuardClient({ roleParam }: { roleParam: string }) {
           return
         }
 
-        const { data: profile, error } = await supabase.from('users').select('role').eq('email', user.email).single()
+        const { data: profile, error } = await supabase.from('users').select('role').eq('user_id', user.id).single()
         if (error || !profile) {
           if (!mounted) return
           setMessage('プロフィールが見つかりません')
