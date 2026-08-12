@@ -3,9 +3,21 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase/client'
 
+type ApplicantProfile = {
+  user_id: string
+  name: string | null
+  name_kana: string | null
+  school_name: string | null
+  grade: string | null
+  email: string
+  guardian_email: string | null
+  guardian_consent: string | null
+  guardian_consent_at: string | null
+}
+
 export default function ApplicantGuardianPanel() {
   const [loading, setLoading] = useState(true)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<ApplicantProfile | null>(null)
   const [name, setName] = useState('')
   const [nameKana, setNameKana] = useState('')
   const [schoolName, setSchoolName] = useState('')
@@ -21,7 +33,7 @@ export default function ApplicantGuardianPanel() {
   async function fetchProfile() {
     setLoading(true)
     try {
-      const userRes: any = await supabase.auth.getUser()
+      const userRes = await supabase.auth.getUser()
       const user = userRes?.data?.user
       if (!user?.email) {
         setProfile(null)
@@ -32,13 +44,14 @@ export default function ApplicantGuardianPanel() {
         .select('user_id,name,name_kana,school_name,grade,email,guardian_email,guardian_consent,guardian_consent_at')
         .eq('user_id', user.id)
         .single()
-      setProfile(data)
-      setName(data?.name || user.user_metadata?.name || user.email?.split('@')[0] || '')
-      setNameKana(data?.name_kana || '')
-      setSchoolName(data?.school_name || '')
-      setGrade(data?.grade || '')
-      setGuardianEmail(data?.guardian_email || '')
-    } catch (e) {
+      const safeData = data as ApplicantProfile | null
+      setProfile(safeData)
+      setName(safeData?.name || user.user_metadata?.name || user.email?.split('@')[0] || '')
+      setNameKana(safeData?.name_kana || '')
+      setSchoolName(safeData?.school_name || '')
+      setGrade(safeData?.grade || '')
+      setGuardianEmail(safeData?.guardian_email || '')
+    } catch {
       // ignore
     } finally {
       setLoading(false)
@@ -46,7 +59,10 @@ export default function ApplicantGuardianPanel() {
   }
 
   useEffect(() => {
-    fetchProfile()
+    const timerId = window.setTimeout(() => {
+      void fetchProfile()
+    }, 0)
+    return () => window.clearTimeout(timerId)
   }, [])
 
   async function handleRegisterApplicant(e: React.FormEvent) {
@@ -81,8 +97,9 @@ export default function ApplicantGuardianPanel() {
       setStatus('情報を保存しました。おうちの人にメールを送りました。')
       setEditing(false)
       await fetchProfile()
-    } catch (e: any) {
-      setStatus('送れませんでした: ' + (e?.message || String(e)))
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e)
+      setStatus('送れませんでした: ' + message)
     }
   }
 
@@ -111,8 +128,9 @@ export default function ApplicantGuardianPanel() {
       }
       setStatus('おうちの人にもう一度メールを送りました。')
       await fetchProfile()
-    } catch (e: any) {
-      setStatus('再送できませんでした: ' + (e?.message || String(e)))
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e)
+      setStatus('再送できませんでした: ' + message)
     }
   }
 

@@ -6,6 +6,20 @@ import { grantRoleToUser, resolveActiveRoleForIdentity } from '../../../lib/auth
 
 const resend = new Resend(process.env.RESEND_API_KEY as string)
 
+type DbUserRow = {
+  user_id: string
+  email: string
+}
+
+type InviteRow = {
+  invite_id: string
+  target_role: string
+  max_uses: number | null
+  use_count: number
+  expires_at: string | null
+  status: string
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -25,7 +39,7 @@ export async function POST(req: Request) {
       try {
         const { data: { users }, error: listErr } = await supabaseAdmin.auth.admin.listUsers()
         if (!listErr) {
-          const existing = users.find((u: any) => u.email === email)
+          const existing = users.find((u) => u.email === email)
           if (existing) {
             return existing
           }
@@ -70,8 +84,8 @@ export async function POST(req: Request) {
     }
 
     const token = crypto.randomUUID()
-    let userRecord: any = null
-    let appliedInvite: any = null
+    let userRecord: DbUserRow | null = null
+    let appliedInvite: InviteRow | null = null
     let isNewProfile = false
 
     if (Array.isArray(existingRows) && existingRows.length > 0) {
@@ -96,7 +110,7 @@ export async function POST(req: Request) {
       if (updateErr) {
         return NextResponse.json({ error: updateErr.message }, { status: 500 })
       }
-      userRecord = updated
+      userRecord = updated as DbUserRow
     } else {
       const { data, error } = await supabaseAdmin
         .from('users')
@@ -152,14 +166,18 @@ export async function POST(req: Request) {
           if (updateErr) {
             return NextResponse.json({ error: updateErr.message }, { status: 500 })
           }
-          userRecord = updated
+          userRecord = updated as DbUserRow
         } else {
           return NextResponse.json({ error: error.message }, { status: 500 })
         }
       } else {
-        userRecord = data
+        userRecord = data as DbUserRow
         isNewProfile = true
       }
+    }
+
+    if (!userRecord) {
+      return NextResponse.json({ error: 'failed to create or load user profile' }, { status: 500 })
     }
 
     // If inviteToken provided, validate and apply role
@@ -167,7 +185,7 @@ export async function POST(req: Request) {
       try {
         const { data: invites, error: inviteErr } = await supabaseAdmin.from('invites').select('*').eq('token', inviteToken).limit(1).single()
         if (!inviteErr && invites) {
-          const inv = invites as any
+          const inv = invites as InviteRow
           const now = new Date().toISOString()
           const maxUses = inv.max_uses ?? 1
           const useCount = inv.use_count ?? 0
@@ -183,7 +201,7 @@ export async function POST(req: Request) {
             appliedInvite = inv
           }
         }
-      } catch (e) {
+      } catch {
         // ignore invite errors
       }
     }
@@ -208,7 +226,7 @@ export async function POST(req: Request) {
       let fromHost = 'example.com'
       try {
         fromHost = new URL(base).hostname
-      } catch (e) {
+      } catch {
         fromHost = 'example.com'
       }
       return `no-reply@${fromHost}`

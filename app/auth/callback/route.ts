@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (shouldRegister) {
-      const body: any = {
+      const body: { name: string; email: string; authProvider: string; inviteToken?: string } = {
         name: user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0],
         email: user.email,
         authProvider: 'google',

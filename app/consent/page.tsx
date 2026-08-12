@@ -3,14 +3,16 @@ import ApproveClient from './ApproveClient'
 
 type Props = { searchParams?: { token?: string } }
 
+type ConsentSearchParams = { token?: string }
+
 export default async function Page({ searchParams }: Props) {
   // Next.js may provide `searchParams` as a Promise in some runtimes.
   // Await if it's a thenable, otherwise use it directly.
-  let params: any = searchParams
-  if (params && typeof params.then === 'function') {
+  let params: ConsentSearchParams | Promise<ConsentSearchParams> | undefined = searchParams
+  if (params && typeof params === 'object' && 'then' in params && typeof params.then === 'function') {
     params = await params
   }
-  const token = params?.token
+  const token = (params as ConsentSearchParams | undefined)?.token
   if (!token) {
     return (
       <div className="w-full px-4 py-10">

@@ -27,7 +27,7 @@ function SignInPageContent() {
           flowType: 'pkce',
           queryParams: { access_type: 'online' },
         },
-      } as any)
+      })
     } catch (err: unknown) {
       setStatus('OAuth エラー: ' + (err instanceof Error ? err.message : String(err)))
     }
@@ -95,7 +95,7 @@ function SignInPageContent() {
     e.preventDefault()
     setStatus('認証中...')
     try {
-      const res = await supabase.auth.signInWithPassword({ email, password } as any)
+      const res = await supabase.auth.signInWithPassword({ email, password })
       if (res.error) {
         setStatus('サインイン失敗: ' + res.error.message)
         return

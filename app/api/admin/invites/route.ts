@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase/server'
-import { resolveActiveRoleForIdentity, VALID_ROLES } from '../../../../lib/auth/role-security'
+import { resolveActiveRoleForIdentity, VALID_ROLES, type RoleId } from '../../../../lib/auth/role-security'
 
 const INVITABLE_ROLES = ['staff', 'contest_admin', 'staff_primary', 'staff_manager', 'judge', 'admin']
 
@@ -28,6 +28,18 @@ async function ensureAdmin(req: Request) {
   return { ok: true as const, userId: resolved.userId }
 }
 
+function errorToMessage(err: unknown) {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  const maybeMsg = (err as { message?: unknown } | null | undefined)?.message
+  if (typeof maybeMsg === 'string') return maybeMsg
+  try {
+    return JSON.stringify(err)
+  } catch {
+    return String(err)
+  }
+}
+
 export async function GET(req: Request) {
   try {
     const adminCheck = await ensureAdmin(req)
@@ -36,8 +48,8 @@ export async function GET(req: Request) {
     const { data, error } = await supabaseAdmin.from('invites').select('*').order('created_at', { ascending: false })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ invites: data })
-  } catch (err: any) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }
 }
 
@@ -49,7 +61,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { target_role, max_uses, expires_in_hours } = body
     if (!target_role) return NextResponse.json({ error: 'target_role required' }, { status: 400 })
-    if (!VALID_ROLES.includes(target_role as any) || !INVITABLE_ROLES.includes(target_role)) {
+    if (!VALID_ROLES.includes(target_role as RoleId) || !INVITABLE_ROLES.includes(target_role)) {
       return NextResponse.json({ error: 'invalid target_role' }, { status: 400 })
     }
 
@@ -86,7 +98,7 @@ export async function POST(req: Request) {
           console.warn('[invites] failed to list auth users:', listErr.message)
           return NextResponse.json({ error: 'creator not found in users table and auth lookup failed' }, { status: 400 })
         }
-        const authUser = adminList?.users?.find((u: any) => u.id === created_by_user_id || u.user_id === created_by_user_id)
+        const authUser = adminList?.users?.find((u) => u.id === created_by_user_id)
         if (!authUser) {
           return NextResponse.json({ error: 'creator not found' }, { status: 400 })
         }
@@ -124,8 +136,8 @@ export async function POST(req: Request) {
         } else {
           resolvedCreatorId = createdCreator.user_id
         }
-      } catch (e: any) {
-        console.warn('[invites] exception while ensuring creator:', String(e))
+      } catch (e: unknown) {
+        console.warn('[invites] exception while ensuring creator:', errorToMessage(e))
         return NextResponse.json({ error: 'failed to ensure creator exists' }, { status: 500 })
       }
     }
@@ -143,8 +155,8 @@ export async function POST(req: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ invite: data })
-  } catch (err: any) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }
 }
 
@@ -160,7 +172,7 @@ export async function PUT(req: Request) {
     const { data, error } = await supabaseAdmin.from('invites').update({ status }).eq('invite_id', invite_id).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ invite: data })
-  } catch (err: any) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }
 }

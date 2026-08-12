@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     if (!guardianName || !guardianPhone) return NextResponse.json({ error: 'guardianName and guardianPhone required' }, { status: 400 })
 
     const now = new Date().toISOString()
-    const updateCols: any = {
+    const updateCols: Record<string, string> = {
       guardian_consent: 'approved',
       guardian_consent_at: now,
       guardian_name: guardianName,

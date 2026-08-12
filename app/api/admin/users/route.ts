@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase/server'
-import { replaceUserRoles, resolveActiveRoleForIdentity, VALID_ROLES } from '../../../../lib/auth/role-security'
+import { replaceUserRoles, resolveActiveRoleForIdentity, VALID_ROLES, type RoleId } from '../../../../lib/auth/role-security'
 
 function errorToMessage(err: unknown) {
   if (err instanceof Error) return err.message
@@ -14,13 +14,13 @@ function errorToMessage(err: unknown) {
   }
 }
 
-function isRelationMissingError(error: any) {
-  const msg = String(error?.message || '')
+function isRelationMissingError(error: unknown) {
+  const msg = String((error as { message?: string } | null | undefined)?.message || '')
   return msg.includes('relation') && msg.includes('does not exist')
 }
 
-function isColumnMissingError(error: any, columnName: string) {
-  const msg = String(error?.message || '')
+function isColumnMissingError(error: unknown, columnName: string) {
+  const msg = String((error as { message?: string } | null | undefined)?.message || '')
   return msg.includes('column') && msg.includes(columnName) && msg.includes('does not exist')
 }
 
@@ -87,7 +87,7 @@ export async function GET(req: Request) {
 
     // if user_id is provided, return single user
     if (user_id) {
-      let rowRes = await supabaseAdmin.from('users').select(selectCols).eq('user_id', user_id).single()
+      const rowRes = await supabaseAdmin.from('users').select(selectCols).eq('user_id', user_id).single()
       if (rowRes.error && isColumnMissingError(rowRes.error, 'current_role_id')) {
         throw new Error('users.current_role_id column is missing. Apply multi-role SQL migration first.')
       }
@@ -116,7 +116,7 @@ export async function GET(req: Request) {
     if (role) query = query.eq('current_role_id', role)
     if (guardian) query = query.eq('guardian_consent', guardian)
 
-    let { data, error } = await query
+    const { data, error } = await query
     if (error && isColumnMissingError(error, 'current_role_id')) {
       throw new Error('users.current_role_id column is missing. Apply multi-role SQL migration first.')
     }
@@ -152,7 +152,7 @@ export async function PUT(req: Request) {
     const { user_id, role, is_active, name, name_kana, assigned_roles, current_role_id } = body
     if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 })
 
-    const updates: any = {}
+    const updates: Record<string, unknown> = {}
     if (typeof is_active === 'boolean') updates.is_active = is_active
     if (typeof name === 'string' && name.trim().length > 0) {
       if (name.length > 200) return NextResponse.json({ error: 'name too long' }, { status: 400 })
@@ -173,7 +173,7 @@ export async function PUT(req: Request) {
     }
 
     if (assignedRoles) {
-      const invalid = assignedRoles.find((r) => !VALID_ROLES.includes(r as any))
+      const invalid = assignedRoles.find((r) => !VALID_ROLES.includes(r as RoleId))
       if (invalid) return NextResponse.json({ error: `invalid role: ${invalid}` }, { status: 400 })
 
       const replaced = await replaceUserRoles({
@@ -187,7 +187,7 @@ export async function PUT(req: Request) {
       }
       updates.current_role_id = replaced.currentRoleId
     } else if (typeof current_role_id === 'string' && current_role_id) {
-      if (!VALID_ROLES.includes(current_role_id as any)) {
+      if (!VALID_ROLES.includes(current_role_id as RoleId)) {
         return NextResponse.json({ error: 'invalid current_role_id' }, { status: 400 })
       }
       updates.current_role_id = current_role_id
@@ -195,7 +195,7 @@ export async function PUT(req: Request) {
 
     if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'no updates provided' }, { status: 400 })
 
-    let updateRes = await supabaseAdmin.from('users').update(updates).eq('user_id', user_id).select().single()
+    const updateRes = await supabaseAdmin.from('users').update(updates).eq('user_id', user_id).select().single()
     if (updateRes.error && isColumnMissingError(updateRes.error, 'current_role_id')) {
       throw new Error('users.current_role_id column is missing. Apply multi-role SQL migration first.')
     }

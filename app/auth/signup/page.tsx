@@ -40,14 +40,14 @@ function SignUpPageContent() {
         email,
         password,
         options: { data: { name } },
-      } as any)
+      })
 
       if (res.error) {
         setStatus('エラー: ' + res.error.message)
         return
       }
 
-      const signUpData = (res as any)?.data || {}
+      const signUpData = res.data || {}
       const user = signUpData.user
       const session = signUpData.session
       const identities = user?.identities || []
@@ -55,7 +55,7 @@ function SignUpPageContent() {
       // Supabase client response does not expose strict delivery status.
       // Use conservative heuristics to avoid false "登録完了" for already-signed-up users.
       const now = Date.now()
-      const parseTime = (value: any) => {
+      const parseTime = (value: unknown) => {
         if (!value) return null
         const t = new Date(value).getTime()
         return Number.isFinite(t) ? t : null
@@ -91,7 +91,7 @@ function SignUpPageContent() {
       window.alert(doneMessage)
       router.push('/')
       return
-    } catch (err) {
+    } catch {
       setStatus('送信に失敗しました')
     }
   }
@@ -100,11 +100,11 @@ function SignUpPageContent() {
     // if already signed in (e.g., OAuth), redirect to dashboard
     ;(async () => {
       try {
-        const userRes: any = await supabase.auth.getUser()
+        const userRes = await supabase.auth.getUser()
         const user = userRes?.data?.user
         if (user?.email) {
           try {
-            const sessionRes: any = await supabase.auth.getSession()
+            const sessionRes = await supabase.auth.getSession()
             const accessToken = sessionRes?.data?.session?.access_token || null
             if (accessToken) {
               const rolesRes = await fetch('/api/auth/roles', { headers: { Authorization: `Bearer ${accessToken}` } })
@@ -114,7 +114,7 @@ function SignUpPageContent() {
                 return
               }
             }
-          } catch (err) {
+          } catch {
             // ignore and continue
           }
 
@@ -129,13 +129,13 @@ function SignUpPageContent() {
               const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
               await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email: user.email, inviteToken }) })
             }
-          } catch (e) {
+          } catch {
             // ignore
           }
           router.push('/applicant')
           return
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     })()

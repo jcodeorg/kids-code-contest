@@ -23,7 +23,7 @@ export default function RegisterPage() {
         const data = await res.json()
         setStatus('エラー: ' + (data?.error || res.status))
       }
-    } catch (err) {
+    } catch {
       setStatus('送信に失敗しました')
     }
   }

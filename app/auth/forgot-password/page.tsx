@@ -24,7 +24,7 @@ function ForgotPasswordPageContent() {
 
       setSent(true)
       setStatus('再設定メールを送信しました。メールのリンクから新しいパスワードを設定してください。')
-    } catch (err) {
+    } catch {
       setSent(false)
       setStatus('再設定メールの送信に失敗しました。')
     }

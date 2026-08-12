@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       }
 
       const users = data?.users || []
-      const found = users.some((u: any) => (u.email || '').trim().toLowerCase() === email)
+      const found = users.some((u) => (u.email || '').trim().toLowerCase() === email)
       if (found) {
         return NextResponse.json({ exists: true, source: 'auth' })
       }

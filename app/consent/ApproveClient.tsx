@@ -64,7 +64,7 @@ export default function ApproveClient({ token, initialStatus, initialData }: { t
       } else {
         setMessage('エラー: ' + (data?.error || res.status))
       }
-    } catch (err) {
+    } catch {
       setMessage('送信に失敗しました')
     } finally {
       setLoading(false)

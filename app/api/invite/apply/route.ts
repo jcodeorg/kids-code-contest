@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     await resolveActiveRoleForIdentity({ userId: userRows.user_id, email })
 
     return NextResponse.json({ ok: true })
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

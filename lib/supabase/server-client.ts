@@ -19,7 +19,11 @@ export async function createSupabaseServerClient() {
       setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
         try {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options as any)
+            if (options) {
+              cookieStore.set(name, value, options)
+            } else {
+              cookieStore.set(name, value)
+            }
           })
         } catch {
           // setAll may be called from a Server Component where setting cookies is not supported.

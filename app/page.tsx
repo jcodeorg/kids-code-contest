@@ -1,6 +1,5 @@
 "use client"
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase/client'
@@ -15,7 +14,7 @@ export default function Home() {
   useEffect(() => {
     ;(async () => {
       try {
-        const r: any = await supabase.auth.getUser()
+        const r = await supabase.auth.getUser()
         const user = r?.data?.user
         if (user) {
           setSignedIn(true)
@@ -24,7 +23,7 @@ export default function Home() {
             const provider = user?.app_metadata?.provider || (user?.app_metadata?.providers && user.app_metadata.providers[0]) || (user?.identities && user.identities[0]?.provider)
             const display = provider ? `${provider}でサインイン中` : `${user.email || 'サインイン中'}でサインイン中`
             setStatus(display)
-          } catch (e) {
+          } catch {
             setStatus(`${user.email || 'サインイン中'}でサインイン中`)
           }
           // try to load role and name from profile; default values if missing
@@ -32,17 +31,16 @@ export default function Home() {
             const { data: profile } = await supabase.from('users').select('current_role_id,name').eq('user_id', user.id).single()
             setRole(profile?.current_role_id || 'applicant')
             setUserName(profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || '')
-          } catch (err) {
+          } catch {
             setRole('applicant')
             setUserName(user.user_metadata?.name || user.email?.split('@')[0] || '')
           }
           return
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function signInWithGoogle() {
@@ -57,9 +55,10 @@ export default function Home() {
           // Avoid forcing Google consent/account confirmation every time.
           queryParams: { access_type: 'online' },
         },
-      } as any)
-    } catch (e: any) {
-      setStatus('OAuth エラー: ' + (e?.message || String(e)))
+      })
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e)
+      setStatus('OAuth エラー: ' + message)
     }
   }
 
@@ -80,7 +79,7 @@ export default function Home() {
       await supabase.auth.signOut()
       setSignedIn(false)
       router.push('/')
-    } catch (e) {
+    } catch {
       setStatus('サインアウトに失敗しました')
     }
   }

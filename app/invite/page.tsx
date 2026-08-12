@@ -19,7 +19,7 @@ function InviteLandingContent() {
         flowType: 'pkce',
         queryParams: { access_type: 'online' },
       },
-    } as any)
+    })
   }
 
   return (
