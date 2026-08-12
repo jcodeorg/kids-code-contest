@@ -2,6 +2,24 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase/server'
 import { replaceUserRoles, resolveActiveRoleForIdentity, VALID_ROLES } from '../../../../lib/auth/role-security'
 
+const LEGACY_ROLE_VALUES = new Set(['applicant', 'staff_primary', 'staff_manager', 'judge', 'admin'])
+const LEGACY_ROLE_ALIAS: Record<string, string> = {
+  staff: 'staff_primary',
+  contest_admin: 'staff_manager',
+}
+
+function errorToMessage(err: unknown) {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  const maybeMsg = (err as { message?: unknown } | null | undefined)?.message
+  if (typeof maybeMsg === 'string') return maybeMsg
+  try {
+    return JSON.stringify(err)
+  } catch {
+    return String(err)
+  }
+}
+
 function isRelationMissingError(error: any) {
   const msg = String(error?.message || '')
   return msg.includes('relation') && msg.includes('does not exist')
@@ -132,8 +150,8 @@ export async function GET(req: Request) {
     })
 
     return NextResponse.json({ users })
-  } catch (err: any) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }
 }
 
@@ -179,14 +197,18 @@ export async function PUT(req: Request) {
       if (!replaced.ok) {
         return NextResponse.json({ error: replaced.message, code: replaced.code }, { status: 400 })
       }
-      updates.role = replaced.currentRoleId
       updates.current_role_id = replaced.currentRoleId
+
+      const legacyRole = LEGACY_ROLE_VALUES.has(replaced.currentRoleId) ? replaced.currentRoleId : LEGACY_ROLE_ALIAS[replaced.currentRoleId]
+      if (legacyRole) updates.role = legacyRole
     } else if (typeof current_role_id === 'string' && current_role_id) {
       if (!VALID_ROLES.includes(current_role_id as any)) {
         return NextResponse.json({ error: 'invalid current_role_id' }, { status: 400 })
       }
       updates.current_role_id = current_role_id
-      updates.role = current_role_id
+
+      const legacyRole = LEGACY_ROLE_VALUES.has(current_role_id) ? current_role_id : LEGACY_ROLE_ALIAS[current_role_id]
+      if (legacyRole) updates.role = legacyRole
     }
 
     if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'no updates provided' }, { status: 400 })
@@ -201,8 +223,8 @@ export async function PUT(req: Request) {
     const { data, error } = updateRes
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ user: data })
-  } catch (err: any) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }
 }
 
@@ -220,7 +242,7 @@ export async function DELETE(req: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     return NextResponse.json({ ok: true, user: data })
-  } catch (err: any) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }
 }

@@ -22,6 +22,12 @@ const ROLE_PRIORITY: RoleId[] = [
   'admin',
 ]
 
+const LEGACY_ROLE_VALUES = new Set(['applicant', 'staff_primary', 'staff_manager', 'judge', 'admin'])
+const LEGACY_ROLE_ALIAS: Record<string, string> = {
+  staff: 'staff_primary',
+  contest_admin: 'staff_manager',
+}
+
 function isRelationMissingError(error: unknown) {
   const msg = String((error as { message?: string } | null | undefined)?.message || '')
   return msg.includes('relation') && msg.includes('does not exist')
@@ -113,15 +119,27 @@ async function loadUserByIdentity(userId?: string, email?: string) {
 }
 
 async function updateActiveRole(userId: string, roleId: string) {
+  // Preferred path: keep canonical role in current_role_id.
   const withCurrent = await supabaseAdmin
     .from('users')
-    .update({ current_role_id: roleId, role: roleId })
+    .update({ current_role_id: roleId })
     .eq('user_id', userId)
 
-  if (!withCurrent.error) return
+  if (!withCurrent.error) {
+    // Backward compatibility: only mirror to legacy enum role when value is compatible.
+    const legacyCandidate = LEGACY_ROLE_VALUES.has(roleId) ? roleId : LEGACY_ROLE_ALIAS[roleId]
+    if (legacyCandidate) {
+      await supabaseAdmin.from('users').update({ role: legacyCandidate }).eq('user_id', userId)
+    }
+    return
+  }
 
   if (isColumnMissingError(withCurrent.error, 'current_role_id')) {
-    await supabaseAdmin.from('users').update({ role: roleId }).eq('user_id', userId)
+    const legacyCandidate = LEGACY_ROLE_VALUES.has(roleId) ? roleId : LEGACY_ROLE_ALIAS[roleId]
+    if (!legacyCandidate) {
+      throw new Error(`legacy role column does not support role: ${roleId}`)
+    }
+    await supabaseAdmin.from('users').update({ role: legacyCandidate }).eq('user_id', userId)
     return
   }
 
