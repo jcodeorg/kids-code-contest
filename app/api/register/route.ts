@@ -72,6 +72,7 @@ export async function POST(req: Request) {
     const token = crypto.randomUUID()
     let userRecord: any = null
     let appliedInvite: any = null
+    let isNewProfile = false
 
     if (Array.isArray(existingRows) && existingRows.length > 0) {
       // existing user: update token and set consent back to pending, then resend
@@ -157,6 +158,7 @@ export async function POST(req: Request) {
         }
       } else {
         userRecord = data
+        isNewProfile = true
       }
     }
 
@@ -186,9 +188,12 @@ export async function POST(req: Request) {
       }
     }
 
-    // 通常登録でも最低1ロール(applicant)を確保。剥奪時フォールバックの土台になる。
+    // applicant自動付与は新規プロフィール作成時のみ。
+    // 既存ユーザーに毎回付与すると、管理者ロールだけのアカウントにも applicant が混入してしまう。
     try {
-      await grantRoleToUser({ userId: userRecord.user_id, roleId: 'applicant', makeCurrent: !appliedInvite })
+      if (isNewProfile) {
+        await grantRoleToUser({ userId: userRecord.user_id, roleId: 'applicant', makeCurrent: !appliedInvite })
+      }
       await resolveActiveRoleForIdentity({ userId: userRecord.user_id, email })
     } catch (e: unknown) {
       console.error('[register] multi-role initialization failed:', e)

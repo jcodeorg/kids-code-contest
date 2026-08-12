@@ -68,12 +68,19 @@ function SignInPageContent() {
         return
       } catch {
         try {
-          const displayName = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
-          await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: displayName, email: user.email, inviteToken }),
-          })
+          const { data: existing } = await supabase
+            .from('users')
+            .select('user_id')
+            .eq('user_id', user.id)
+            .maybeSingle()
+          if (!existing) {
+            const displayName = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
+            await fetch('/api/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: displayName, email: user.email, inviteToken }),
+            })
+          }
         } catch {
           // ignore
         }
