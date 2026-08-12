@@ -16,49 +16,70 @@ function SignInPageContent() {
   async function signInWithGoogle() {
     setStatus('Googleでサインイン中...')
     try {
-      const redirectTo = inviteToken ? `${window.location.origin}/auth/callback?token=${encodeURIComponent(inviteToken)}` : `${window.location.origin}/auth/callback`
+      const redirectTo = inviteToken
+        ? `${window.location.origin}/auth/callback?token=${encodeURIComponent(inviteToken)}`
+        : `${window.location.origin}/auth/callback`
+
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
           flowType: 'pkce',
-          // Avoid forcing Google consent/account confirmation every time.
           queryParams: { access_type: 'online' },
         },
       } as any)
-      // OAuth redirects to provider; no further action here
-    } catch (err: any) {
-      setStatus('OAuth エラー: ' + (err?.message || String(err)))
+    } catch (err: unknown) {
+      setStatus('OAuth エラー: ' + (err instanceof Error ? err.message : String(err)))
     }
   }
 
-  // No global Enter handler here: let the form submit on Enter (メールでサインイン)
-
   async function fetchRoleAndRedirect() {
     try {
-      const userRes: any = await supabase.auth.getUser()
+      const userRes = await supabase.auth.getUser()
       const user = userRes?.data?.user
       if (!user?.email) return
-      // try to read profile; if missing, create via server API (handles OAuth signups)
-      try {
-        const { data: profile } = await supabase.from('users').select('role').eq('user_id', user.id).single()
-        const role = profile?.role || 'applicant'
-        router.push(`/${role}`)
-        return
-      } catch (e) {
-        // profile missing — create it server-side
+
+      const sessionRes = await supabase.auth.getSession()
+      const accessToken = sessionRes?.data?.session?.access_token || null
+
+      if (accessToken) {
         try {
-          const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
-          await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email: user.email, inviteToken }) })
-        } catch (err) {
+          const rolesRes = await fetch('/api/auth/roles', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          })
+          const rolesData = await rolesRes.json()
+          if (rolesRes.ok && rolesData?.current_role_id) {
+            router.push(`/${rolesData.current_role_id}`)
+            return
+          }
+        } catch {
+          // continue fallback
+        }
+      }
+
+      try {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('current_role_id,role')
+          .eq('user_id', user.id)
+          .single()
+        const resolvedRole = profile?.current_role_id || profile?.role || 'applicant'
+        router.push(`/${resolvedRole}`)
+        return
+      } catch {
+        try {
+          const displayName = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
+          await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: displayName, email: user.email, inviteToken }),
+          })
+        } catch {
           // ignore
         }
-        // redirect to applicant dashboard by default
         router.push('/applicant')
-        return
       }
-    } catch (e) {
-      // fallback
+    } catch {
       router.push('/applicant')
     }
   }
@@ -72,24 +93,30 @@ function SignInPageContent() {
         setStatus('サインイン失敗: ' + res.error.message)
         return
       }
-      // if invite token present, apply to this user
+
       if (inviteToken) {
         try {
-          await fetch('/api/invite/apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: inviteToken, email }) })
-        } catch (e) {
+          await fetch('/api/invite/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: inviteToken, email }),
+          })
+        } catch {
           // ignore
         }
       }
+
       setStatus('サインイン成功')
       await fetchRoleAndRedirect()
-    } catch (err) {
+    } catch {
       setStatus('サインインに失敗しました')
     }
   }
 
   useEffect(() => {
-    // handle case where user returns from OAuth or already signed in
-    fetchRoleAndRedirect()
+    void (async () => {
+      await fetchRoleAndRedirect()
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

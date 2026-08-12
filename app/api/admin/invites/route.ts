@@ -1,8 +1,38 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase/server'
+import { resolveActiveRoleForIdentity, VALID_ROLES } from '../../../../lib/auth/role-security'
+
+const INVITABLE_ROLES = ['staff', 'contest_admin', 'staff_primary', 'staff_manager', 'judge', 'admin']
+
+async function ensureAdmin(req: Request) {
+  const authHeader = req.headers.get('authorization') || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null
+  if (!token) return { ok: false as const, status: 401, error: 'authorization token required' }
+
+  const authRes = await supabaseAdmin.auth.getUser(token)
+  if (authRes.error || !authRes.data.user?.id) {
+    return { ok: false as const, status: 401, error: 'invalid token' }
+  }
+
+  const user = authRes.data.user
+  const resolved = await resolveActiveRoleForIdentity({ userId: user.id, email: user.email || undefined })
+  if (!resolved.ok) {
+    const status = resolved.code === 'NO_ASSIGNED_ROLES' ? 403 : 404
+    return { ok: false as const, status, error: resolved.message }
+  }
+
+  if (resolved.currentRoleId !== 'admin') {
+    return { ok: false as const, status: 403, error: 'admin role required' }
+  }
+
+  return { ok: true as const, userId: resolved.userId }
+}
 
 export async function GET(req: Request) {
   try {
+    const adminCheck = await ensureAdmin(req)
+    if (!adminCheck.ok) return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
+
     const { data, error } = await supabaseAdmin.from('invites').select('*').order('created_at', { ascending: false })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ invites: data })
@@ -13,9 +43,15 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const adminCheck = await ensureAdmin(req)
+    if (!adminCheck.ok) return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
+
     const body = await req.json()
     const { target_role, max_uses, expires_in_hours } = body
     if (!target_role) return NextResponse.json({ error: 'target_role required' }, { status: 400 })
+    if (!VALID_ROLES.includes(target_role as any) || !INVITABLE_ROLES.includes(target_role)) {
+      return NextResponse.json({ error: 'invalid target_role' }, { status: 400 })
+    }
 
     // derive creator from Authorization bearer token (server-side determination)
     const authHeader = (req.headers.get('authorization') || '')
@@ -114,6 +150,9 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const adminCheck = await ensureAdmin(req)
+    if (!adminCheck.ok) return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
+
     const body = await req.json()
     const { invite_id, status } = body
     if (!invite_id || !status) return NextResponse.json({ error: 'invite_id and status required' }, { status: 400 })

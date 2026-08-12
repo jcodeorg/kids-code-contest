@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase/client'
 
 type User = {
@@ -8,24 +9,46 @@ type User = {
   email: string
   name: string
   role: string
+  current_role_id?: string
+  assigned_role_ids?: string[]
   guardian_consent: string
   is_active: boolean
   created_at: string
 }
 
-const ROLES = ['applicant', 'staff_primary', 'staff_manager', 'judge', 'admin']
+type Invite = {
+  invite_id: string
+  token: string
+  target_role: string
+  use_count: number
+  max_uses: number | null
+  expires_at: string
+  status: string
+}
+
+const ROLES = ['applicant', 'staff', 'contest_admin', 'staff_primary', 'staff_manager', 'judge', 'admin']
 
 export default function AdminPanel() {
+  const router = useRouter()
   const [users, setUsers] = useState<User[]>([])
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(false)
   const [filterRole, setFilterRole] = useState('')
   const [filterGuardian, setFilterGuardian] = useState('')
-  const [invites, setInvites] = useState<any[]>([])
-  const [invRole, setInvRole] = useState('staff_primary')
+  const [invites, setInvites] = useState<Invite[]>([])
+  const [invRole, setInvRole] = useState('staff')
   const [invMaxUses, setInvMaxUses] = useState<number | ''>(1)
   const [invExpiresHours, setInvExpiresHours] = useState(24)
   const [creatingInvite, setCreatingInvite] = useState(false)
+
+  async function buildAuthHeaders(withJson = false) {
+    const sess = await supabase.auth.getSession()
+    const accessToken = sess.data.session?.access_token || null
+    const headers: Record<string, string> = {}
+    if (withJson) headers['Content-Type'] = 'application/json'
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+    return headers
+  }
 
   async function fetchUsers() {
     setLoading(true)
@@ -34,7 +57,8 @@ export default function AdminPanel() {
       if (q) params.set('q', q)
       if (filterRole) params.set('role', filterRole)
       if (filterGuardian) params.set('guardian', filterGuardian)
-      const res = await fetch(`/api/admin/users?${params.toString()}`)
+      const headers = await buildAuthHeaders(false)
+      const res = await fetch(`/api/admin/users?${params.toString()}`, { headers })
       const data = await res.json()
       setUsers(data.users || [])
     } catch (e) {
@@ -46,7 +70,8 @@ export default function AdminPanel() {
 
   async function fetchInvites() {
     try {
-      const res = await fetch('/api/admin/invites')
+      const headers = await buildAuthHeaders(false)
+      const res = await fetch('/api/admin/invites', { headers })
       const d = await res.json()
       setInvites(d.invites || [])
     } catch (e) {
@@ -55,13 +80,14 @@ export default function AdminPanel() {
   }
 
   useEffect(() => {
-    fetchUsers()
-    fetchInvites()
+    void (async () => {
+      await Promise.all([fetchUsers(), fetchInvites()])
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function editUser(user_id: string) {
-    // navigate to edit page
-    window.location.href = `/admin/user/${user_id}`
+    router.push(`/admin/user/${user_id}`)
   }
 
   return (
@@ -75,6 +101,8 @@ export default function AdminPanel() {
             <label className="form-control">
               <div className="label"><span className="label-text">ロール</span></div>
               <select className="select select-bordered" value={invRole} onChange={(e) => setInvRole(e.target.value)}>
+                <option value="staff">staff</option>
+                <option value="contest_admin">contest_admin</option>
                 <option value="staff_primary">staff_primary</option>
                 <option value="staff_manager">staff_manager</option>
                 <option value="judge">judge</option>
@@ -82,7 +110,7 @@ export default function AdminPanel() {
             </label>
             <label className="form-control">
               <div className="label"><span className="label-text">最大利用回数</span></div>
-              <input className="input input-bordered" type="number" value={invMaxUses as any} onChange={(e) => setInvMaxUses(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0で無制限" />
+              <input className="input input-bordered" type="number" value={invMaxUses === '' ? '' : String(invMaxUses)} onChange={(e) => setInvMaxUses(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0で無制限" />
             </label>
             <label className="form-control">
               <div className="label"><span className="label-text">有効期限（時間）</span></div>
@@ -91,11 +119,7 @@ export default function AdminPanel() {
             <button className="btn btn-primary" onClick={async () => {
               setCreatingInvite(true)
               try {
-                const sess: any = await supabase.auth.getSession()
-                const accessToken = sess?.data?.session?.access_token || null
-
-                const headers: any = { 'Content-Type': 'application/json' }
-                if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+                const headers = await buildAuthHeaders(true)
 
                 const res = await fetch('/api/admin/invites', { method: 'POST', headers, body: JSON.stringify({ target_role: invRole, max_uses: invMaxUses === '' ? null : invMaxUses, expires_in_hours: invExpiresHours }) })
                 const d = await res.json()
@@ -147,7 +171,8 @@ export default function AdminPanel() {
                   <tr>
                     <th>メール</th>
                     <th>氏名</th>
-                    <th>ロール</th>
+                    <th>現在ロール</th>
+                    <th>割当ロール</th>
                     <th>保護者同意</th>
                     <th>有効</th>
                     <th>操作</th>
@@ -158,7 +183,10 @@ export default function AdminPanel() {
                     <tr key={u.user_id}>
                       <td>{u.email}</td>
                       <td>{u.name}</td>
-                      <td><span className="badge badge-outline">{u.role}</span></td>
+                      <td><span className="badge badge-outline">{u.current_role_id || u.role}</span></td>
+                      <td>
+                        <div className="text-xs">{Array.isArray(u.assigned_role_ids) && u.assigned_role_ids.length > 0 ? u.assigned_role_ids.join(', ') : (u.current_role_id || u.role)}</div>
+                      </td>
                       <td>{u.guardian_consent}</td>
                       <td>{u.is_active ? '有効' : '無効'}</td>
                       <td>
@@ -208,7 +236,7 @@ export default function AdminPanel() {
                     <td>
                       <div className="flex flex-wrap gap-2">
                         <button className="btn btn-sm btn-primary" onClick={async () => { const base = process.env.NEXT_PUBLIC_APP_URL || window.location.origin; const url = `${base.replace(/\/$/, '')}/invite?token=${inv.token}`; await navigator.clipboard?.writeText(url); alert('コピーしました: ' + url) }}>コピー</button>
-                        {inv.status !== 'cancelled' && <button className="btn btn-sm btn-ghost" onClick={async () => { if (!confirm('無効化しますか？')) return; const res = await fetch('/api/admin/invites', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invite_id: inv.invite_id, status: 'cancelled' }) }); const d = await res.json(); if (!res.ok) { alert('失敗: ' + (d?.error || res.status)); return } fetchInvites() }}>無効化</button>}
+                        {inv.status !== 'cancelled' && <button className="btn btn-sm btn-ghost" onClick={async () => { if (!confirm('無効化しますか？')) return; const headers = await buildAuthHeaders(true); const res = await fetch('/api/admin/invites', { method: 'PUT', headers, body: JSON.stringify({ invite_id: inv.invite_id, status: 'cancelled' }) }); const d = await res.json(); if (!res.ok) { alert('失敗: ' + (d?.error || res.status)); return } fetchInvites() }}>無効化</button>}
                       </div>
                     </td>
                   </tr>

@@ -14,6 +14,8 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
 
   const titleMap: Record<string, string> = {
     applicant: '応募者ダッシュボード',
+    staff: '一次採点スタッフダッシュボード',
+    contest_admin: 'コンテスト管理者ダッシュボード',
     staff_primary: '一次採点スタッフダッシュボード',
     staff_manager: '集計管理スタッフダッシュボード',
     judge: '審査員ダッシュボード',

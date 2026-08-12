@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase/server'
+import { grantRoleToUser, resolveActiveRoleForIdentity } from '../../../../lib/auth/role-security'
 
 export async function POST(req: Request) {
   try {
@@ -22,11 +23,14 @@ export async function POST(req: Request) {
     const { data: userRows, error: userErr } = await supabaseAdmin.from('users').select('user_id').eq('email', email).limit(1).single()
     if (userErr || !userRows) return NextResponse.json({ error: 'user not found' }, { status: 404 })
 
-    // apply role
-    await supabaseAdmin.from('users').update({ role: inv.target_role }).eq('user_id', userRows.user_id)
+    // apply role (multi-role compatible)
+    await grantRoleToUser({ userId: userRows.user_id, roleId: inv.target_role, makeCurrent: true })
     // increment invite use
     await supabaseAdmin.from('invites').update({ use_count: (useCount + 1) }).eq('invite_id', inv.invite_id)
     await supabaseAdmin.from('invite_usages').insert({ invite_id: inv.invite_id, used_by_user_id: userRows.user_id })
+
+    // resolve and persist active role with fallback security
+    await resolveActiveRoleForIdentity({ userId: userRows.user_id, email })
 
     return NextResponse.json({ ok: true })
   } catch (err: any) {

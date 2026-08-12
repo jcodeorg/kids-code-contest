@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../lib/supabase/server'
 import { Resend } from 'resend'
 import { randomUUID } from 'crypto'
+import { grantRoleToUser, resolveActiveRoleForIdentity } from '../../../lib/auth/role-security'
 
 const resend = new Resend(process.env.RESEND_API_KEY as string)
 
@@ -171,8 +172,8 @@ export async function POST(req: Request) {
           const expired = inv.expires_at && inv.expires_at <= now
           const exhausted = (typeof maxUses === 'number' && maxUses > 0 && useCount >= maxUses)
           if (inv.status === 'active' && !expired && !exhausted) {
-            // set user's role to target_role
-            await supabaseAdmin.from('users').update({ role: inv.target_role }).eq('user_id', userRecord.user_id)
+            // 多重ロールに付与し、招待ロールをアクティブに切替
+            await grantRoleToUser({ userId: userRecord.user_id, roleId: inv.target_role, makeCurrent: true })
             // increment use_count
             await supabaseAdmin.from('invites').update({ use_count: (useCount + 1) }).eq('invite_id', inv.invite_id)
             // record usage
@@ -183,6 +184,14 @@ export async function POST(req: Request) {
       } catch (e) {
         // ignore invite errors
       }
+    }
+
+    // 通常登録でも最低1ロール(applicant)を確保。剥奪時フォールバックの土台になる。
+    try {
+      await grantRoleToUser({ userId: userRecord.user_id, roleId: 'applicant', makeCurrent: !appliedInvite })
+      await resolveActiveRoleForIdentity({ userId: userRecord.user_id, email })
+    } catch {
+      // user_rolesテーブル未適用環境では legacy role カラムへフォールバック
     }
 
     const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'

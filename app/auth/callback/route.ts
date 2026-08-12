@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { resolveActiveRoleForIdentity } from '../../../lib/auth/role-security'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
@@ -61,8 +62,10 @@ export async function GET(request: NextRequest) {
   // Resolve role for direct dashboard redirect.
   let role = 'applicant'
   try {
-    const { data: profile } = await supabase.from('users').select('role').eq('user_id', user.id).single()
-    role = profile?.role || 'applicant'
+    const resolved = await resolveActiveRoleForIdentity({ userId: user.id, email: user.email || undefined })
+    if (resolved.ok) {
+      role = resolved.currentRoleId
+    }
   } catch {
     role = 'applicant'
   }

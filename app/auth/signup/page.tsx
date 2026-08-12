@@ -104,21 +104,29 @@ function SignUpPageContent() {
         const user = userRes?.data?.user
         if (user?.email) {
           try {
-            const { data: profile } = await supabase.from('users').select('role').eq('user_id', user.id).single()
-            const role = profile?.role || 'applicant'
-            router.push(`/${role}`)
-            return
-          } catch (err) {
-            // create profile for OAuth users
-            try {
-              const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
-              await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email: user.email, inviteToken }) })
-            } catch (e) {
-              // ignore
+            const sessionRes: any = await supabase.auth.getSession()
+            const accessToken = sessionRes?.data?.session?.access_token || null
+            if (accessToken) {
+              const rolesRes = await fetch('/api/auth/roles', { headers: { Authorization: `Bearer ${accessToken}` } })
+              const rolesData = await rolesRes.json()
+              if (rolesRes.ok && rolesData?.current_role_id) {
+                router.push(`/${rolesData.current_role_id}`)
+                return
+              }
             }
-            router.push('/applicant')
-            return
+          } catch (err) {
+            // ignore and continue
           }
+
+          // create profile for OAuth users
+          try {
+            const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email.split('@')[0]
+            await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email: user.email, inviteToken }) })
+          } catch (e) {
+            // ignore
+          }
+          router.push('/applicant')
+          return
         }
       } catch (e) {
         // ignore

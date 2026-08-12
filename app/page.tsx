@@ -29,8 +29,8 @@ export default function Home() {
           }
           // try to load role and name from profile; default values if missing
           try {
-            const { data: profile } = await supabase.from('users').select('role,name').eq('user_id', user.id).single()
-            setRole(profile?.role || 'applicant')
+            const { data: profile } = await supabase.from('users').select('role,current_role_id,name').eq('user_id', user.id).single()
+            setRole(profile?.current_role_id || profile?.role || 'applicant')
             setUserName(profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || '')
           } catch (err) {
             setRole('applicant')

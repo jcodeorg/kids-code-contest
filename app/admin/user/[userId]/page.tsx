@@ -2,34 +2,62 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { supabase } from '../../../../lib/supabase/client'
+
+type EditableUser = {
+  user_id: string
+  email: string
+  name?: string
+  name_kana?: string
+  role?: string
+  current_role_id?: string
+  assigned_role_ids?: string[]
+  is_active?: boolean
+}
 
 export default function EditUserPage() {
   const router = useRouter()
   const params = useParams() as { userId?: string }
   const userId = params.userId
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<EditableUser | null>(null)
   const [loading, setLoading] = useState(false)
   const [role, setRole] = useState('')
+  const [assignedRoles, setAssignedRoles] = useState<string[]>([])
   const [isActive, setIsActive] = useState(true)
   const [name, setName] = useState('')
   const [nameKana, setNameKana] = useState('')
-  const ROLES = ['applicant', 'staff_primary', 'staff_manager', 'judge', 'admin']
+  const ROLES = ['applicant', 'staff', 'contest_admin', 'staff_primary', 'staff_manager', 'judge', 'admin']
+
+  async function buildAuthHeaders(withJson = false) {
+    const sess = await supabase.auth.getSession()
+    const accessToken = sess.data.session?.access_token || null
+    const headers: Record<string, string> = {}
+    if (withJson) headers['Content-Type'] = 'application/json'
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+    return headers
+  }
 
   useEffect(() => {
     if (!userId) return
     ;(async () => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/admin/users?user_id=${userId}`)
+        const headers = await buildAuthHeaders(false)
+        const res = await fetch(`/api/admin/users?user_id=${userId}`, { headers })
         const d = await res.json()
         if (res.ok && d.user) {
           setUser(d.user)
-          setRole(d.user.role)
+          const current = d.user.current_role_id || d.user.role || 'applicant'
+          const assigned = Array.isArray(d.user.assigned_role_ids) && d.user.assigned_role_ids.length > 0
+            ? d.user.assigned_role_ids
+            : [current]
+          setRole(current)
+          setAssignedRoles(assigned)
           setIsActive(Boolean(d.user.is_active))
           setName(d.user.name || '')
           setNameKana(d.user.name_kana || '')
         }
-      } catch (e) {
+      } catch {
         // ignore
       } finally {
         setLoading(false)
@@ -40,17 +68,37 @@ export default function EditUserPage() {
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault()
     if (!userId) return
+    if (assignedRoles.length === 0) {
+      alert('最低1つのロールを選択してください')
+      return
+    }
+    if (!assignedRoles.includes(role)) {
+      alert('現在ロールは割り当てロールの中から選択してください')
+      return
+    }
     setLoading(true)
     try {
-      const res = await fetch('/api/admin/users', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId, role, is_active: isActive, name, name_kana: nameKana }) })
+      const headers = await buildAuthHeaders(true)
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
+          user_id: userId,
+          current_role_id: role,
+          assigned_roles: assignedRoles,
+          is_active: isActive,
+          name,
+          name_kana: nameKana,
+        }),
+      })
       const d = await res.json()
       if (!res.ok) {
         alert('更新失敗: ' + (d?.error || res.status))
         return
       }
       router.push('/admin')
-    } catch (e: any) {
-      alert('更新に失敗しました: ' + (e?.message || e))
+    } catch (e: unknown) {
+      alert('更新に失敗しました: ' + (e instanceof Error ? e.message : String(e)))
     } finally {
       setLoading(false)
     }
@@ -62,6 +110,19 @@ export default function EditUserPage() {
 
   if (loading) return <div className="max-w-2xl mx-auto alert alert-info">読み込み中...</div>
   if (!user) return <div className="max-w-2xl mx-auto alert alert-warning">ユーザーが見つかりません。</div>
+
+  const toggleAssignedRole = (targetRole: string) => {
+    setAssignedRoles((prev) => {
+      const exists = prev.includes(targetRole)
+      if (exists) {
+        const next = prev.filter((r) => r !== targetRole)
+        if (next.length === 0) return prev
+        if (!next.includes(role)) setRole(next[0])
+        return next
+      }
+      return [...prev, targetRole]
+    })
+  }
 
   return (
     <div className="w-full px-4 py-10">
@@ -86,10 +147,27 @@ export default function EditUserPage() {
               </label>
             </div>
 
+            <div className="space-y-3">
+              <div className="text-sm font-medium">割り当てロール</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {ROLES.map((r) => (
+                  <label key={r} className="label cursor-pointer justify-start gap-3 border rounded-lg px-3 py-2">
+                    <input
+                      className="checkbox checkbox-primary"
+                      type="checkbox"
+                      checked={assignedRoles.includes(r)}
+                      onChange={() => toggleAssignedRole(r)}
+                    />
+                    <span className="label-text">{r}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <label className="form-control w-full max-w-xs">
-              <div className="label"><span className="label-text">ロール</span></div>
+              <div className="label"><span className="label-text">現在ロール</span></div>
               <select className="select select-bordered" value={role} onChange={(e) => setRole(e.target.value)}>
-                {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                {assignedRoles.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
             </label>
 
@@ -108,15 +186,16 @@ export default function EditUserPage() {
                   if (!confirm('本当にこのユーザーを削除しますか？この操作は取り消せません。')) return
                   try {
                     setLoading(true)
-                    const res = await fetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId }) })
+                    const headers = await buildAuthHeaders(true)
+                    const res = await fetch('/api/admin/users', { method: 'DELETE', headers, body: JSON.stringify({ user_id: userId }) })
                     const d = await res.json()
                     if (!res.ok) {
                       alert('削除に失敗しました: ' + (d?.error || res.status))
                       return
                     }
                     router.push('/admin')
-                  } catch (e: any) {
-                    alert('削除に失敗しました: ' + (e?.message || String(e)))
+                  } catch (e: unknown) {
+                    alert('削除に失敗しました: ' + (e instanceof Error ? e.message : String(e)))
                   } finally {
                     setLoading(false)
                   }
