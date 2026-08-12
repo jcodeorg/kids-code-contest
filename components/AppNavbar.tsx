@@ -133,6 +133,22 @@ export default function AppNavbar() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    setBusy(true)
+    try {
+      const redirectTo = `${window.location.origin}/auth/callback`
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: { access_type: 'online' },
+        },
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <header className="w-full border-b border-[#3f84e8] bg-[#4D96FF] text-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-3 sm:px-4">
@@ -142,37 +158,50 @@ export default function AppNavbar() {
 
         <div className="ml-auto dropdown dropdown-end">
           <button tabIndex={0} className="btn btn-sm border-white/30 bg-white/15 text-white hover:bg-white/25" disabled={busy}>
-            <span className="max-w-[8rem] truncate font-semibold">{userName}</span>
-            <span className="opacity-85">{ROLE_LABELS[currentRole] || currentRole}</span>
+            {signedIn ? (
+              <>
+                <span className="max-w-[8rem] truncate font-semibold">{userName}</span>
+                <span className="opacity-85">{ROLE_LABELS[currentRole] || currentRole}</span>
+              </>
+            ) : (
+              <span className="font-semibold">サインイン</span>
+            )}
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 opacity-90" aria-hidden="true">
               <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
             </svg>
           </button>
           <ul tabIndex={0} className="menu dropdown-content z-50 mt-2 w-64 rounded-box bg-base-100 p-2 text-base-content shadow-lg">
-            <li className="menu-title"><span>ロール切替</span></li>
-            {signedIn ? assignedRoles.map((r) => (
-              <li key={r}>
-                <button
-                  type="button"
-                  className={r === currentRole ? 'active' : ''}
-                  onClick={() => handleRoleSwitch(r)}
-                  disabled={busy || r === currentRole}
-                >
-                  {ROLE_LABELS[r] || r}
-                </button>
-              </li>
-            )) : <li><span className="text-base-content/70">サインインすると切替できます</span></li>}
-            <li className="menu-title"><span>アカウント</span></li>
             {signedIn ? (
-              <li>
-                <button type="button" onClick={handleSignOut} disabled={busy} className="text-error">
-                  サインアウト
-                </button>
-              </li>
+              <>
+                <li className="menu-title"><span>ロール切替</span></li>
+                {assignedRoles.map((r) => (
+                  <li key={r}>
+                    <button
+                      type="button"
+                      className={r === currentRole ? 'active' : ''}
+                      onClick={() => handleRoleSwitch(r)}
+                      disabled={busy || r === currentRole}
+                    >
+                      {ROLE_LABELS[r] || r}
+                    </button>
+                  </li>
+                ))}
+                <li className="menu-title"><span>アカウント</span></li>
+                <li>
+                  <button type="button" onClick={handleSignOut} disabled={busy} className="text-error">
+                    サインアウト
+                  </button>
+                </li>
+              </>
             ) : (
-              <li>
-                <Link href="/auth/signin">サインイン</Link>
-              </li>
+              <>
+                <li>
+                  <button type="button" onClick={handleGoogleSignIn} disabled={busy}>Googleでサインイン</button>
+                </li>
+                <li>
+                  <Link href="/auth/signin">メールでサインイン</Link>
+                </li>
+              </>
             )}
           </ul>
         </div>
