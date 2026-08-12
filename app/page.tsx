@@ -8,8 +8,6 @@ export default function Home() {
   const router = useRouter()
   const [status, setStatus] = useState('')
   const [signedIn, setSignedIn] = useState(false)
-  const [role, setRole] = useState<string>('applicant')
-  const [userName, setUserName] = useState<string>('')
 
   useEffect(() => {
     ;(async () => {
@@ -28,12 +26,9 @@ export default function Home() {
           }
           // try to load role and name from profile; default values if missing
           try {
-            const { data: profile } = await supabase.from('users').select('current_role_id,name').eq('user_id', user.id).single()
-            setRole(profile?.current_role_id || 'applicant')
-            setUserName(profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || '')
+            await supabase.from('users').select('current_role_id,name').eq('user_id', user.id).single()
           } catch {
-            setRole('applicant')
-            setUserName(user.user_metadata?.name || user.email?.split('@')[0] || '')
+            // noop
           }
           return
         }
@@ -72,17 +67,6 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  async function handleSignOut() {
-    setStatus('サインアウト中...')
-    try {
-      await supabase.auth.signOut()
-      setSignedIn(false)
-      router.push('/')
-    } catch {
-      setStatus('サインアウトに失敗しました')
-    }
-  }
-
   return (
     <main className="w-full px-4 py-10">
       <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
@@ -115,14 +99,7 @@ export default function Home() {
 
           <p className="text-sm text-base-content/80 mt-2">できるだけ「Google でサインイン」を使おう。そっちのほうがかんたんだよ。Googleを使えない人だけ、メールでサインインしてね。</p>
 
-          {signedIn ? (
-            <div className="alert alert-info text-sm flex items-center justify-between">
-              <div>役割: {role}　名前: {userName || '—'}</div>
-              <button className="link" onClick={handleSignOut}>サインアウト</button>
-            </div>
-          ) : (
-            status ? <div className="alert alert-info text-sm">{status}</div> : null
-          )}
+          {signedIn || status ? <div className="alert alert-info text-sm">{status || 'サインイン中です。メニューからロール切替・サインアウトできます。'}</div> : null}
         </div>
       </div>
     </main>

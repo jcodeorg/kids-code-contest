@@ -49,6 +49,19 @@ export default function AdminPanel() {
     return headers
   }
 
+  async function parseJsonOrThrow(res: Response) {
+    const contentType = res.headers.get('content-type') || ''
+    if (!contentType.includes('application/json')) {
+      const text = await res.text()
+      throw new Error(`JSON以外のレスポンスを受信しました (status: ${res.status}). ${text.slice(0, 120)}`)
+    }
+    const data = await res.json()
+    if (!res.ok) {
+      throw new Error(data?.error || `APIエラー: ${res.status}`)
+    }
+    return data
+  }
+
   async function fetchUsers() {
     setLoading(true)
     try {
@@ -58,10 +71,11 @@ export default function AdminPanel() {
       if (filterGuardian) params.set('guardian', filterGuardian)
       const headers = await buildAuthHeaders(false)
       const res = await fetch(`/api/admin/users?${params.toString()}`, { headers })
-      const data = await res.json()
+      const data = await parseJsonOrThrow(res)
       setUsers(data.users || [])
     } catch (e) {
       console.error(e)
+      setUsers([])
     } finally {
       setLoading(false)
     }
@@ -71,10 +85,11 @@ export default function AdminPanel() {
     try {
       const headers = await buildAuthHeaders(false)
       const res = await fetch('/api/admin/invites', { headers })
-      const d = await res.json()
+      const d = await parseJsonOrThrow(res)
       setInvites(d.invites || [])
     } catch (e) {
       console.error(e)
+      setInvites([])
     }
   }
 
@@ -121,11 +136,7 @@ export default function AdminPanel() {
                 const headers = await buildAuthHeaders(true)
 
                 const res = await fetch('/api/admin/invites', { method: 'POST', headers, body: JSON.stringify({ target_role: invRole, max_uses: invMaxUses === '' ? null : invMaxUses, expires_in_hours: invExpiresHours }) })
-                const d = await res.json()
-                if (!res.ok) {
-                  alert('作成失敗: ' + (d?.error || res.status))
-                  return
-                }
+                const d = await parseJsonOrThrow(res)
                 const inviteToken = d.invite?.token
                 const base = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
                 const url = `${base.replace(/\/$/, '')}/invite?token=${inviteToken}`
@@ -134,7 +145,7 @@ export default function AdminPanel() {
                 fetchInvites()
               } catch (e) {
                 console.error(e)
-                alert('作成に失敗しました')
+                alert(e instanceof Error ? `作成に失敗しました: ${e.message}` : '作成に失敗しました')
               } finally {
                 setCreatingInvite(false)
               }
@@ -235,7 +246,7 @@ export default function AdminPanel() {
                     <td>
                       <div className="flex flex-wrap gap-2">
                         <button className="btn btn-sm btn-primary" onClick={async () => { const base = process.env.NEXT_PUBLIC_APP_URL || window.location.origin; const url = `${base.replace(/\/$/, '')}/invite?token=${inv.token}`; await navigator.clipboard?.writeText(url); alert('コピーしました: ' + url) }}>コピー</button>
-                        {inv.status !== 'cancelled' && <button className="btn btn-sm btn-ghost" onClick={async () => { if (!confirm('無効化しますか？')) return; const headers = await buildAuthHeaders(true); const res = await fetch('/api/admin/invites', { method: 'PUT', headers, body: JSON.stringify({ invite_id: inv.invite_id, status: 'cancelled' }) }); const d = await res.json(); if (!res.ok) { alert('失敗: ' + (d?.error || res.status)); return } fetchInvites() }}>無効化</button>}
+                        {inv.status !== 'cancelled' && <button className="btn btn-sm btn-ghost" onClick={async () => { if (!confirm('無効化しますか？')) return; try { const headers = await buildAuthHeaders(true); const res = await fetch('/api/admin/invites', { method: 'PUT', headers, body: JSON.stringify({ invite_id: inv.invite_id, status: 'cancelled' }) }); await parseJsonOrThrow(res); fetchInvites() } catch (e) { alert(e instanceof Error ? `失敗: ${e.message}` : '失敗しました') } }}>無効化</button>}
                       </div>
                     </td>
                   </tr>

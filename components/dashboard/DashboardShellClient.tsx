@@ -2,7 +2,6 @@
 
 import React from 'react'
 import { usePathname } from 'next/navigation'
-import SignOutClient from './SignOutClient'
 import AdminPanel from './admin/AdminPanel'
 import ApplicantGuardianPanel from './ApplicantGuardianPanel'
 import ApplicantContestPanel from './contest/ApplicantContestPanel'
@@ -30,7 +29,6 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
     <div className="w-full px-4 py-8">
       <div className="max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-4">{title}</h1>
-      <SignOutClient role={role} />
       {role === 'admin' ? (
         <>
           <div className="badge badge-primary badge-outline mb-3">admin</div>
