@@ -16,7 +16,6 @@ function InviteLandingContent() {
       provider: 'google',
       options: {
         redirectTo,
-        flowType: 'pkce',
         queryParams: { access_type: 'online' },
       },
     })

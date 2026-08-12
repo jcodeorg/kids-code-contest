@@ -51,7 +51,6 @@ export default function Home() {
         provider: 'google',
         options: {
           redirectTo,
-          flowType: 'pkce',
           // Avoid forcing Google consent/account confirmation every time.
           queryParams: { access_type: 'online' },
         },

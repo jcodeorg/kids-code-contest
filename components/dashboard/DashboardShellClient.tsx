@@ -5,6 +5,9 @@ import { usePathname } from 'next/navigation'
 import SignOutClient from './SignOutClient'
 import AdminPanel from './admin/AdminPanel'
 import ApplicantGuardianPanel from './ApplicantGuardianPanel'
+import ApplicantContestPanel from './contest/ApplicantContestPanel'
+import ReviewPanel from './contest/ReviewPanel'
+import ContestAdminJudgingPanel from './contest/ContestAdminJudgingPanel'
 
 export default function DashboardShellClient({ paramsRole }: { paramsRole?: string }) {
   const pathname = usePathname() || ''
@@ -32,12 +35,14 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
         <>
           <div className="badge badge-primary badge-outline mb-3">admin</div>
           <AdminPanel />
+          <ContestAdminJudgingPanel />
         </>
       ) : (
         <>
           {role === 'applicant' ? (
             <>
               <ApplicantGuardianPanel />
+              <ApplicantContestPanel />
               <div className="card bg-base-100 shadow-md border border-base-200">
                 <div className="card-body">
                   <p>ここは <strong>{role}</strong> 向けのダッシュボードです。</p>
@@ -46,12 +51,29 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
               </div>
             </>
           ) : (
-            <div className="card bg-base-100 shadow-md border border-base-200">
-              <div className="card-body">
-              <p>ここは <strong>{role}</strong> 向けのダッシュボードです。</p>
-              <p className="text-base-content/70">必要なウィジェットやリンクをここに追加してください。</p>
-              </div>
-            </div>
+            <>
+              {(role === 'staff' || role === 'staff_primary' || role === 'staff_manager') ? (
+                <ReviewPanel phase="primary" roleLabel="一次審査（primary）" />
+              ) : null}
+              {role === 'judge' ? (
+                <ReviewPanel phase="final" roleLabel="二次審査（final）" />
+              ) : null}
+              {role === 'contest_admin' ? (
+                <>
+                  <ReviewPanel phase="primary" roleLabel="一次審査の確認" />
+                  <ReviewPanel phase="final" roleLabel="二次審査の確認" />
+                  <ContestAdminJudgingPanel />
+                </>
+              ) : null}
+              {(role !== 'staff' && role !== 'staff_primary' && role !== 'staff_manager' && role !== 'judge' && role !== 'contest_admin') ? (
+                <div className="card bg-base-100 shadow-md border border-base-200">
+                  <div className="card-body">
+                    <p>ここは <strong>{role}</strong> 向けのダッシュボードです。</p>
+                    <p className="text-base-content/70">必要なウィジェットやリンクをここに追加してください。</p>
+                  </div>
+                </div>
+              ) : null}
+            </>
           )}
         </>
       )}

@@ -1,0 +1,93 @@
+import { NextResponse } from 'next/server'
+import { supabaseAdmin } from '../../../../lib/supabase/server'
+import { errorToMessage, requireAuthWithRoles } from '../../../../lib/auth/request-auth'
+
+export async function GET(req: Request) {
+  try {
+    const auth = await requireAuthWithRoles(req, ['contest_admin', 'admin'])
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+    const { data, error } = await supabaseAdmin
+      .from('contests')
+      .select('contest_id,title,year,status,entry_start_at,entry_end_at,created_at')
+      .order('year', { ascending: false })
+      .order('contest_id', { ascending: false })
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ contests: data || [] })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const auth = await requireAuthWithRoles(req, ['contest_admin', 'admin'])
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+    const body = await req.json()
+    const title = typeof body?.title === 'string' ? body.title.trim() : ''
+    const year = Number(body?.year)
+    const status = typeof body?.status === 'string' && body.status ? body.status : 'draft'
+    const entryStartAt = typeof body?.entry_start_at === 'string' ? body.entry_start_at : null
+    const entryEndAt = typeof body?.entry_end_at === 'string' ? body.entry_end_at : null
+
+    if (!title || Number.isNaN(year) || !entryStartAt || !entryEndAt) {
+      return NextResponse.json({ error: 'title, year, entry_start_at, entry_end_at are required' }, { status: 400 })
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('contests')
+      .insert({
+        title,
+        year,
+        status,
+        entry_start_at: entryStartAt,
+        entry_end_at: entryEndAt,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ contest: data })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const auth = await requireAuthWithRoles(req, ['contest_admin', 'admin'])
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+    const body = await req.json()
+    const contestId = Number(body?.contest_id)
+    if (Number.isNaN(contestId)) {
+      return NextResponse.json({ error: 'contest_id is required' }, { status: 400 })
+    }
+
+    const updates: Record<string, unknown> = {}
+    if (typeof body?.title === 'string' && body.title.trim()) updates.title = body.title.trim()
+    if (!Number.isNaN(Number(body?.year))) updates.year = Number(body.year)
+    if (typeof body?.status === 'string' && body.status) updates.status = body.status
+    if (typeof body?.entry_start_at === 'string') updates.entry_start_at = body.entry_start_at
+    if (typeof body?.entry_end_at === 'string') updates.entry_end_at = body.entry_end_at
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'no updates provided' }, { status: 400 })
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('contests')
+      .update(updates)
+      .eq('contest_id', contestId)
+      .select()
+      .single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ contest: data })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
+  }
+}

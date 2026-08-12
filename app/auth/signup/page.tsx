@@ -57,6 +57,9 @@ function SignUpPageContent() {
       const now = Date.now()
       const parseTime = (value: unknown) => {
         if (!value) return null
+        if (!(typeof value === 'string' || typeof value === 'number' || value instanceof Date)) {
+          return null
+        }
         const t = new Date(value).getTime()
         return Number.isFinite(t) ? t : null
       }
