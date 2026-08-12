@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../../lib/supabase/client'
 
@@ -28,22 +29,12 @@ type Entry = {
   works?: { title?: string }
 }
 
-const CATEGORY_OPTIONS = ['scratch', 'microbit', 'web_app', 'python', 'other']
-
 export default function ApplicantContestPanel() {
   const [works, setWorks] = useState<Work[]>([])
   const [contests, setContests] = useState<Contest[]>([])
   const [entries, setEntries] = useState<Entry[]>([])
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
-
-  const [title, setTitle] = useState('')
-  const [category, setCategory] = useState('scratch')
-  const [shortDescription, setShortDescription] = useState('')
-  const [detailedDescription, setDetailedDescription] = useState('')
-  const [workUrl, setWorkUrl] = useState('')
-  const [videoType, setVideoType] = useState('youtube_url')
-  const [videoLocation, setVideoLocation] = useState('')
 
   const [selectedContestId, setSelectedContestId] = useState<number | null>(null)
   const [selectedWorkId, setSelectedWorkId] = useState('')
@@ -94,46 +85,6 @@ export default function ApplicantContestPanel() {
 
   const openContests = useMemo(() => contests.filter((c) => c.status === 'accepting' || c.status === 'draft'), [contests])
 
-  async function createWork(e: React.FormEvent) {
-    e.preventDefault()
-    setStatus('作品を保存中...')
-    try {
-      const headers = await buildAuthHeaders(true)
-      const res = await fetch('/api/works', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          title,
-          category,
-          short_description: shortDescription,
-          detailed_description: detailedDescription,
-          work_url: workUrl,
-          video_type: videoType,
-          video_location: videoLocation,
-          thumbnail_url: '',
-          has_hardware: false,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setStatus('保存失敗: ' + (data?.error || res.status))
-        return
-      }
-
-      setTitle('')
-      setCategory('scratch')
-      setShortDescription('')
-      setDetailedDescription('')
-      setWorkUrl('')
-      setVideoType('youtube_url')
-      setVideoLocation('')
-      setStatus('作品を保存しました')
-      await loadAll()
-    } catch (err: unknown) {
-      setStatus(err instanceof Error ? err.message : '保存に失敗しました')
-    }
-  }
-
   async function submitEntry() {
     if (!selectedContestId || !selectedWorkId) {
       setStatus('コンテストと作品を選択してください')
@@ -163,28 +114,14 @@ export default function ApplicantContestPanel() {
     <div className="space-y-6">
       <section className="card bg-base-100 shadow-md border border-base-200">
         <div className="card-body gap-4">
-          <h3 className="card-title">作品ライブラリ</h3>
-          <form className="grid grid-cols-1 md:grid-cols-2 gap-3" onSubmit={createWork}>
-            <input className="input input-bordered" placeholder="作品タイトル" value={title} onChange={(e) => setTitle(e.target.value)} required />
-            <select className="select select-bordered" value={category} onChange={(e) => setCategory(e.target.value)}>
-              {CATEGORY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-            </select>
-            <input className="input input-bordered md:col-span-2" placeholder="短い説明" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} required />
-            <textarea className="textarea textarea-bordered md:col-span-2" placeholder="詳細説明" value={detailedDescription} onChange={(e) => setDetailedDescription(e.target.value)} required />
-            <input className="input input-bordered" placeholder="作品URL" value={workUrl} onChange={(e) => setWorkUrl(e.target.value)} required />
-            <select className="select select-bordered" value={videoType} onChange={(e) => setVideoType(e.target.value)}>
-              <option value="youtube_url">youtube_url</option>
-              <option value="mp4_file">mp4_file</option>
-            </select>
-            <input className="input input-bordered md:col-span-2" placeholder="動画URL / 保存先" value={videoLocation} onChange={(e) => setVideoLocation(e.target.value)} required />
-            <div className="md:col-span-2">
-              <button className="btn btn-primary" type="submit">作品を保存</button>
-            </div>
-          </form>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="card-title">作品ライブラリ</h3>
+            <Link className="btn btn-primary" href="/applicant/works/new">作品を追加</Link>
+          </div>
 
           <div className="overflow-x-auto">
             <table className="table table-zebra">
-              <thead><tr><th>タイトル</th><th>カテゴリ</th><th>説明</th><th>URL</th></tr></thead>
+              <thead><tr><th>タイトル</th><th>カテゴリ</th><th>説明</th><th>URL</th><th>操作</th></tr></thead>
               <tbody>
                 {works.map((w) => (
                   <tr key={w.work_id}>
@@ -192,6 +129,9 @@ export default function ApplicantContestPanel() {
                     <td>{w.category}</td>
                     <td>{w.short_description}</td>
                     <td className="max-w-xs truncate">{w.work_url}</td>
+                    <td>
+                      <Link className="btn btn-sm btn-outline" href={`/applicant/works/${w.work_id}`}>編集</Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
