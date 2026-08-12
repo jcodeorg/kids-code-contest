@@ -7,4 +7,9 @@ if (!url || !anonKey) {
   throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
 }
 
-export const supabase = createBrowserClient(url, anonKey)
+export const supabase = createBrowserClient(url, anonKey, {
+  auth: {
+    // auth/callback は code を受けて exchangeCodeForSession するため PKCE を使う。
+    flowType: 'pkce',
+  },
+})

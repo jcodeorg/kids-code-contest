@@ -15,6 +15,7 @@ type Work = {
   work_url: string
   video_type: string
   video_location: string
+  thumbnail_url: string
 }
 
 export default function EditWorkPage() {
@@ -64,6 +65,8 @@ export default function EditWorkPage() {
             work_url: target.work_url || '',
             video_type: target.video_type || 'youtube_url',
             video_location: target.video_location || '',
+            thumbnail_url: target.thumbnail_url || '',
+            video_file_url: target.video_type === 'mp4_file' ? (target.video_location || '') : '',
           })
         } catch (err: unknown) {
           setStatus(err instanceof Error ? err.message : '作品取得に失敗しました')
@@ -90,7 +93,8 @@ export default function EditWorkPage() {
         detailed_description: values.detailed_description,
         work_url: values.work_url,
         video_type: values.video_type,
-        video_location: values.video_location,
+        video_location: values.video_location || values.video_file_url || '',
+        thumbnail_url: values.thumbnail_url || undefined,
       }),
     })
     const data = await res.json()

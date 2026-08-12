@@ -28,8 +28,8 @@ export default function NewWorkPage() {
         detailed_description: values.detailed_description,
         work_url: values.work_url,
         video_type: values.video_type,
-        video_location: values.video_location,
-        thumbnail_url: '',
+        video_location: values.video_location || values.video_file_url || '',
+        thumbnail_url: values.thumbnail_url || '',
         has_hardware: false,
       }),
     })
