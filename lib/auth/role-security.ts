@@ -22,12 +22,6 @@ const ROLE_PRIORITY: RoleId[] = [
   'admin',
 ]
 
-const LEGACY_ROLE_VALUES = new Set(['applicant', 'staff_primary', 'staff_manager', 'judge', 'admin'])
-const LEGACY_ROLE_ALIAS: Record<string, string> = {
-  staff: 'staff_primary',
-  contest_admin: 'staff_manager',
-}
-
 function isRelationMissingError(error: unknown) {
   const msg = String((error as { message?: string } | null | undefined)?.message || '')
   return msg.includes('relation') && msg.includes('does not exist')
@@ -54,16 +48,14 @@ async function loadUserByIdentity(userId?: string, email?: string) {
   let profile: {
     user_id: string
     email?: string | null
-    role?: string | null
     current_role_id?: string | null
     is_active?: boolean | null
   } | null = null
-  let withCurrentRoleId = true
 
   if (userId) {
     const byUserId = await supabaseAdmin
       .from('users')
-      .select('user_id,email,role,current_role_id,is_active')
+      .select('user_id,email,current_role_id,is_active')
       .eq('user_id', userId)
       .limit(1)
       .maybeSingle()
@@ -71,83 +63,45 @@ async function loadUserByIdentity(userId?: string, email?: string) {
     if (!byUserId.error && byUserId.data) {
       profile = byUserId.data
     } else if (isColumnMissingError(byUserId.error, 'current_role_id')) {
-      withCurrentRoleId = false
-      const fallbackByUserId = await supabaseAdmin
-        .from('users')
-        .select('user_id,email,role,is_active')
-        .eq('user_id', userId)
-        .limit(1)
-        .maybeSingle()
-      if (!fallbackByUserId.error && fallbackByUserId.data) {
-        profile = fallbackByUserId.data
-      }
+      throw new Error('users.current_role_id column is missing. Apply multi-role SQL migration first.')
     }
   }
 
   if (!profile && email) {
-    const byEmail = withCurrentRoleId
-      ? await supabaseAdmin
-          .from('users')
-          .select('user_id,email,role,current_role_id,is_active')
-          .eq('email', email)
-          .limit(1)
-          .maybeSingle()
-      : await supabaseAdmin
-          .from('users')
-          .select('user_id,email,role,is_active')
-          .eq('email', email)
-          .limit(1)
-          .maybeSingle()
+    const byEmail = await supabaseAdmin
+      .from('users')
+      .select('user_id,email,current_role_id,is_active')
+      .eq('email', email)
+      .limit(1)
+      .maybeSingle()
 
     if (!byEmail.error && byEmail.data) {
       profile = byEmail.data
-    } else if (withCurrentRoleId && isColumnMissingError(byEmail.error, 'current_role_id')) {
-      const fallbackByEmail = await supabaseAdmin
-        .from('users')
-        .select('user_id,email,role,is_active')
-        .eq('email', email)
-        .limit(1)
-        .maybeSingle()
-      if (!fallbackByEmail.error && fallbackByEmail.data) {
-        profile = fallbackByEmail.data
-      }
-      withCurrentRoleId = false
+    } else if (isColumnMissingError(byEmail.error, 'current_role_id')) {
+      throw new Error('users.current_role_id column is missing. Apply multi-role SQL migration first.')
     }
   }
 
-  return { profile, withCurrentRoleId }
+  return { profile }
 }
 
 async function updateActiveRole(userId: string, roleId: string) {
-  // Preferred path: keep canonical role in current_role_id.
   const withCurrent = await supabaseAdmin
     .from('users')
     .update({ current_role_id: roleId })
     .eq('user_id', userId)
 
-  if (!withCurrent.error) {
-    // Backward compatibility: only mirror to legacy enum role when value is compatible.
-    const legacyCandidate = LEGACY_ROLE_VALUES.has(roleId) ? roleId : LEGACY_ROLE_ALIAS[roleId]
-    if (legacyCandidate) {
-      await supabaseAdmin.from('users').update({ role: legacyCandidate }).eq('user_id', userId)
-    }
-    return
-  }
+  if (!withCurrent.error) return
 
   if (isColumnMissingError(withCurrent.error, 'current_role_id')) {
-    const legacyCandidate = LEGACY_ROLE_VALUES.has(roleId) ? roleId : LEGACY_ROLE_ALIAS[roleId]
-    if (!legacyCandidate) {
-      throw new Error(`legacy role column does not support role: ${roleId}`)
-    }
-    await supabaseAdmin.from('users').update({ role: legacyCandidate }).eq('user_id', userId)
-    return
+    throw new Error('users.current_role_id column is missing. Apply multi-role SQL migration first.')
   }
 
   throw withCurrent.error
 }
 
 export async function resolveActiveRoleForIdentity(input: { userId?: string; email?: string }) {
-  const { profile, withCurrentRoleId } = await loadUserByIdentity(input.userId, input.email)
+  const { profile } = await loadUserByIdentity(input.userId, input.email)
 
   if (!profile) {
     return { ok: false as const, code: 'PROFILE_NOT_FOUND' as const, message: 'profile not found' }
@@ -157,7 +111,7 @@ export async function resolveActiveRoleForIdentity(input: { userId?: string; ema
     return { ok: false as const, code: 'INACTIVE_USER' as const, message: 'inactive user' }
   }
 
-  const legacyRole = (profile.current_role_id || profile.role || 'applicant') as string
+  const legacyRole = (profile.current_role_id || 'applicant') as string
 
   const assignedRes = await supabaseAdmin
     .from('user_roles')
@@ -166,30 +120,12 @@ export async function resolveActiveRoleForIdentity(input: { userId?: string; ema
 
   if (assignedRes.error) {
     if (isRelationMissingError(assignedRes.error)) {
-      const role = VALID_ROLES.includes(legacyRole as RoleId) ? legacyRole : 'applicant'
-      return {
-        ok: true as const,
-        userId: profile.user_id as string,
-        currentRoleId: role,
-        assignedRoleIds: [role],
-        mode: withCurrentRoleId ? 'legacy-no-user-roles' : 'legacy-no-user-roles-no-current-role-col',
-      }
+      throw new Error('user_roles table is missing. Apply multi-role SQL migration first.')
     }
     throw assignedRes.error
   }
 
-  let assignedRoles = uniqueRoles((assignedRes.data || []).map((row: { role_id: string }) => row.role_id))
-
-  if (assignedRoles.length === 0) {
-    const seedRole = VALID_ROLES.includes(legacyRole as RoleId) ? legacyRole : 'applicant'
-    const seedInsert = await supabaseAdmin
-      .from('user_roles')
-      .insert({ user_id: profile.user_id, role_id: seedRole })
-
-    if (!seedInsert.error) {
-      assignedRoles = [seedRole]
-    }
-  }
+  const assignedRoles = uniqueRoles((assignedRes.data || []).map((row: { role_id: string }) => row.role_id))
 
   if (assignedRoles.length === 0) {
     return {
@@ -203,7 +139,7 @@ export async function resolveActiveRoleForIdentity(input: { userId?: string; ema
   const fallbackRole = pickFallbackRole(assignedRoles)
   const resolvedRole = assignedRoles.includes(legacyRole) ? legacyRole : fallbackRole
 
-  if (resolvedRole !== profile.current_role_id || resolvedRole !== profile.role) {
+  if (resolvedRole !== profile.current_role_id) {
     await updateActiveRole(profile.user_id, resolvedRole)
   }
 
@@ -252,14 +188,7 @@ export async function replaceUserRoles(input: { userId: string; roleIds: string[
   const delRes = await supabaseAdmin.from('user_roles').delete().eq('user_id', input.userId)
   if (delRes.error) {
     if (isRelationMissingError(delRes.error)) {
-      await updateActiveRole(input.userId, currentRoleCandidate)
-      return {
-        ok: true as const,
-        userId: input.userId,
-        currentRoleId: currentRoleCandidate,
-        assignedRoleIds: roles,
-        mode: 'legacy-no-user-roles',
-      }
+      throw new Error('user_roles table is missing. Apply multi-role SQL migration first.')
     }
     throw delRes.error
   }
@@ -290,10 +219,7 @@ export async function grantRoleToUser(input: { userId: string; roleId: string; m
 
   if (insRes.error) {
     if (isRelationMissingError(insRes.error)) {
-      if (input.makeCurrent) {
-        await updateActiveRole(input.userId, input.roleId)
-      }
-      return { ok: true as const, mode: 'legacy-no-user-roles' }
+      throw new Error('user_roles table is missing. Apply multi-role SQL migration first.')
     }
     throw insRes.error
   }

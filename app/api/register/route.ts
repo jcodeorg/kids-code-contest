@@ -190,8 +190,9 @@ export async function POST(req: Request) {
     try {
       await grantRoleToUser({ userId: userRecord.user_id, roleId: 'applicant', makeCurrent: !appliedInvite })
       await resolveActiveRoleForIdentity({ userId: userRecord.user_id, email })
-    } catch {
-      // user_rolesテーブル未適用環境では legacy role カラムへフォールバック
+    } catch (e: unknown) {
+      console.error('[register] multi-role initialization failed:', e)
+      return NextResponse.json({ error: 'multi-role schema is not ready. apply SQL migration first.' }, { status: 500 })
     }
 
     const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'

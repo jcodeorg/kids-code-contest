@@ -98,7 +98,7 @@ export async function POST(req: Request) {
         // to use the existing row's user_id so we don't violate unique email constraint.
         const { data: createdCreator, error: createProfileErr } = await supabaseAdmin
           .from('users')
-          .insert({ user_id: created_by_user_id, email: creatorEmail, name: creatorName, role: 'admin', is_active: true })
+          .insert({ user_id: created_by_user_id, email: creatorEmail, name: creatorName, current_role_id: 'admin', is_active: true })
           .select()
           .single()
 

@@ -82,4 +82,53 @@ SELECT u.user_id, COALESCE(u.current_role_id, 'applicant')
 FROM users u
 ON CONFLICT (user_id, role_id) DO NOTHING;
 
+-- 5) ENUM依存の最終整理（users.role / invites.target_role）
+-- users.role は旧ENUM(user_role)依存のため、必要に応じて削除する。
+-- 先に current_role_id と user_roles が運用されていることを確認してから実行。
+ALTER TABLE users
+DROP COLUMN IF EXISTS role;
+
+-- invites.target_role が ENUM(user_role) の場合に text へ変更
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'invites'
+      AND column_name = 'target_role'
+      AND udt_name = 'user_role'
+  ) THEN
+    ALTER TABLE invites
+      ALTER COLUMN target_role TYPE VARCHAR(30)
+      USING target_role::text;
+  END IF;
+END $$;
+
+-- invites.target_role を roles.role_id と整合させる外部キー
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_invites_target_role_roles'
+  ) THEN
+    ALTER TABLE invites
+      ADD CONSTRAINT fk_invites_target_role_roles
+      FOREIGN KEY (target_role)
+      REFERENCES roles(role_id)
+      ON DELETE RESTRICT
+      ON UPDATE CASCADE;
+  END IF;
+END $$;
+
+-- user_role型が不要になったら削除（他カラム参照が残っている場合は削除されない）
+DO $$
+BEGIN
+  BEGIN
+    DROP TYPE IF EXISTS user_role;
+  EXCEPTION WHEN dependent_objects_still_exist THEN
+    -- 依存が残る場合はそのまま維持
+    NULL;
+  END;
+END $$;
+
 COMMIT;

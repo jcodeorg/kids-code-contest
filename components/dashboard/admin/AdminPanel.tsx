@@ -8,7 +8,6 @@ type User = {
   user_id: string
   email: string
   name: string
-  role: string
   current_role_id?: string
   assigned_role_ids?: string[]
   guardian_consent: string
@@ -183,9 +182,9 @@ export default function AdminPanel() {
                     <tr key={u.user_id}>
                       <td>{u.email}</td>
                       <td>{u.name}</td>
-                      <td><span className="badge badge-outline">{u.current_role_id || u.role}</span></td>
+                      <td><span className="badge badge-outline">{u.current_role_id || 'applicant'}</span></td>
                       <td>
-                        <div className="text-xs">{Array.isArray(u.assigned_role_ids) && u.assigned_role_ids.length > 0 ? u.assigned_role_ids.join(', ') : (u.current_role_id || u.role)}</div>
+                        <div className="text-xs">{Array.isArray(u.assigned_role_ids) && u.assigned_role_ids.length > 0 ? u.assigned_role_ids.join(', ') : (u.current_role_id || 'applicant')}</div>
                       </td>
                       <td>{u.guardian_consent}</td>
                       <td>{u.is_active ? '有効' : '無効'}</td>

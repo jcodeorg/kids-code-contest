@@ -60,10 +60,10 @@ function SignInPageContent() {
       try {
         const { data: profile } = await supabase
           .from('users')
-          .select('current_role_id,role')
+          .select('current_role_id')
           .eq('user_id', user.id)
           .single()
-        const resolvedRole = profile?.current_role_id || profile?.role || 'applicant'
+        const resolvedRole = profile?.current_role_id || 'applicant'
         router.push(`/${resolvedRole}`)
         return
       } catch {

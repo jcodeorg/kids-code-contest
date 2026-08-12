@@ -2,12 +2,6 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase/server'
 import { replaceUserRoles, resolveActiveRoleForIdentity, VALID_ROLES } from '../../../../lib/auth/role-security'
 
-const LEGACY_ROLE_VALUES = new Set(['applicant', 'staff_primary', 'staff_manager', 'judge', 'admin'])
-const LEGACY_ROLE_ALIAS: Record<string, string> = {
-  staff: 'staff_primary',
-  contest_admin: 'staff_manager',
-}
-
 function errorToMessage(err: unknown) {
   if (err instanceof Error) return err.message
   if (typeof err === 'string') return err
@@ -40,7 +34,7 @@ async function getAssignedRoleMap(userIds: string[]) {
 
   if (roleRes.error) {
     if (isRelationMissingError(roleRes.error)) {
-      return { map: {} as Record<string, string[]>, mode: 'legacy' as const }
+      throw new Error('user_roles table is missing. Apply multi-role SQL migration first.')
     }
     throw roleRes.error
   }
@@ -89,26 +83,26 @@ export async function GET(req: Request) {
     const guardian = url.searchParams.get('guardian') || undefined
     const user_id = url.searchParams.get('user_id') || undefined
 
-    const selectCols = 'user_id,email,name,name_kana,role,current_role_id,guardian_consent,is_active,created_at'
+    const selectCols = 'user_id,email,name,name_kana,current_role_id,guardian_consent,is_active,created_at'
 
     // if user_id is provided, return single user
     if (user_id) {
       let rowRes = await supabaseAdmin.from('users').select(selectCols).eq('user_id', user_id).single()
       if (rowRes.error && isColumnMissingError(rowRes.error, 'current_role_id')) {
-        rowRes = await supabaseAdmin.from('users').select('user_id,email,name,name_kana,role,guardian_consent,is_active,created_at').eq('user_id', user_id).single()
+        throw new Error('users.current_role_id column is missing. Apply multi-role SQL migration first.')
       }
       const { data, error } = rowRes
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
       const assigned = await getAssignedRoleMap([data.user_id])
       const assignedRoles = assigned.mode === 'multi-role'
-        ? (assigned.map[data.user_id] || [])
-        : [data.current_role_id || data.role || 'applicant']
+        ? (assigned.map[data.user_id] || [data.current_role_id || 'applicant'])
+        : [data.current_role_id || 'applicant']
 
       return NextResponse.json({
         user: {
           ...data,
-          current_role_id: data.current_role_id || data.role || 'applicant',
+          current_role_id: data.current_role_id || 'applicant',
           assigned_role_ids: assignedRoles,
         },
       })
@@ -119,32 +113,26 @@ export async function GET(req: Request) {
       // basic ilike on email OR name
       query = query.or(`email.ilike.%${q}%,name.ilike.%${q}%`)
     }
-    if (role) query = query.or(`role.eq.${role},current_role_id.eq.${role}`)
+    if (role) query = query.eq('current_role_id', role)
     if (guardian) query = query.eq('guardian_consent', guardian)
 
     let { data, error } = await query
     if (error && isColumnMissingError(error, 'current_role_id')) {
-      let fallbackQuery = supabaseAdmin.from('users').select('user_id,email,name,name_kana,role,guardian_consent,is_active,created_at').order('created_at', { ascending: false })
-      if (q) fallbackQuery = fallbackQuery.or(`email.ilike.%${q}%,name.ilike.%${q}%`)
-      if (role) fallbackQuery = fallbackQuery.eq('role', role)
-      if (guardian) fallbackQuery = fallbackQuery.eq('guardian_consent', guardian)
-      const fallbackRes = await fallbackQuery
-      data = fallbackRes.data
-      error = fallbackRes.error
+      throw new Error('users.current_role_id column is missing. Apply multi-role SQL migration first.')
     }
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const userIds = (data || []).map((u: any) => u.user_id)
+    const userIds = (data || []).map((u: { user_id: string }) => u.user_id)
     const assigned = await getAssignedRoleMap(userIds)
 
-    const users = (data || []).map((u: any) => {
+    const users = (data || []).map((u: { user_id: string; current_role_id?: string | null } & Record<string, unknown>) => {
       const assignedRoles = assigned.mode === 'multi-role'
-        ? (assigned.map[u.user_id] || [u.current_role_id || u.role || 'applicant'])
-        : [u.current_role_id || u.role || 'applicant']
+        ? (assigned.map[u.user_id] || [u.current_role_id || 'applicant'])
+        : [u.current_role_id || 'applicant']
       return {
         ...u,
-        current_role_id: u.current_role_id || u.role || 'applicant',
+        current_role_id: u.current_role_id || 'applicant',
         assigned_role_ids: assignedRoles,
       }
     })
@@ -198,26 +186,18 @@ export async function PUT(req: Request) {
         return NextResponse.json({ error: replaced.message, code: replaced.code }, { status: 400 })
       }
       updates.current_role_id = replaced.currentRoleId
-
-      const legacyRole = LEGACY_ROLE_VALUES.has(replaced.currentRoleId) ? replaced.currentRoleId : LEGACY_ROLE_ALIAS[replaced.currentRoleId]
-      if (legacyRole) updates.role = legacyRole
     } else if (typeof current_role_id === 'string' && current_role_id) {
       if (!VALID_ROLES.includes(current_role_id as any)) {
         return NextResponse.json({ error: 'invalid current_role_id' }, { status: 400 })
       }
       updates.current_role_id = current_role_id
-
-      const legacyRole = LEGACY_ROLE_VALUES.has(current_role_id) ? current_role_id : LEGACY_ROLE_ALIAS[current_role_id]
-      if (legacyRole) updates.role = legacyRole
     }
 
     if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'no updates provided' }, { status: 400 })
 
     let updateRes = await supabaseAdmin.from('users').update(updates).eq('user_id', user_id).select().single()
     if (updateRes.error && isColumnMissingError(updateRes.error, 'current_role_id')) {
-      const fallbackUpdates = { ...updates }
-      delete fallbackUpdates.current_role_id
-      updateRes = await supabaseAdmin.from('users').update(fallbackUpdates).eq('user_id', user_id).select().single()
+      throw new Error('users.current_role_id column is missing. Apply multi-role SQL migration first.')
     }
 
     const { data, error } = updateRes

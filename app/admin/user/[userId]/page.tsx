@@ -9,7 +9,6 @@ type EditableUser = {
   email: string
   name?: string
   name_kana?: string
-  role?: string
   current_role_id?: string
   assigned_role_ids?: string[]
   is_active?: boolean
@@ -47,7 +46,7 @@ export default function EditUserPage() {
         const d = await res.json()
         if (res.ok && d.user) {
           setUser(d.user)
-          const current = d.user.current_role_id || d.user.role || 'applicant'
+          const current = d.user.current_role_id || 'applicant'
           const assigned = Array.isArray(d.user.assigned_role_ids) && d.user.assigned_role_ids.length > 0
             ? d.user.assigned_role_ids
             : [current]
