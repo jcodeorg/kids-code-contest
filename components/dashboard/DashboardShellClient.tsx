@@ -33,7 +33,6 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
         <>
           <div className="badge badge-primary badge-outline mb-3">admin</div>
           <AdminPanel />
-          <ContestAdminJudgingPanel />
         </>
       ) : (
         <>
