@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '../../../lib/supabase/server'
-import { Resend } from 'resend'
 import { randomUUID } from 'crypto'
+import { Resend } from 'resend'
+import { supabaseAdmin } from '../../../lib/supabase/server'
 import { grantRoleToUser, resolveActiveRoleForIdentity } from '../../../lib/auth/role-security'
 
 const resend = new Resend(process.env.RESEND_API_KEY as string)
@@ -20,18 +20,61 @@ type InviteRow = {
   status: string
 }
 
+type ContestRow = {
+  contest_id: number
+  title: string
+  year: number
+  status: string
+}
+
+type ContestEntryRow = {
+  entry_id: number
+  contest_id: number
+  user_id: string
+  guardian_email: string | null
+  guardian_consent: string | null
+  guardian_consent_token: string | null
+  guardian_consent_at: string | null
+  guardian_agreed_ip: string | null
+  school_name: string | null
+  grade: string | null
+  guardian_name: string | null
+  guardian_phone: string | null
+  work_id: string | null
+  work_number: number | null
+  entry_type: string | null
+  team_name: string | null
+  team_members: string | null
+  status: string | null
+  is_primary_passed: boolean | null
+}
+
+async function resolveCurrentContest() {
+  const { data, error } = await supabaseAdmin
+    .from('contests')
+    .select('contest_id,title,year,status')
+    .order('created_at', { ascending: false })
+    .order('contest_id', { ascending: false })
+
+  if (error) throw error
+
+  const contests = (data || []) as ContestRow[]
+  if (!contests.length) return null
+
+  const active = contests.find((contest) => ['accepting', 'primary_judging', 'final_judging', 'draft'].includes(contest.status))
+  return active || contests[0]
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { name, nameKana, schoolName, grade, email, guardianEmail, inviteToken, authProvider } = body
+    const { name, nameKana, email, guardianEmail, inviteToken, authProvider } = body || {}
     if (!email) {
       return NextResponse.json({ error: 'email is required' }, { status: 400 })
     }
 
     const safeName = (typeof name === 'string' && name.trim()) ? name.trim() : (typeof email === 'string' ? email.split('@')[0] : 'ユーザー')
     const safeNameKana = (typeof nameKana === 'string' && nameKana.trim()) ? nameKana.trim() : null
-    const safeSchoolName = (typeof schoolName === 'string' && schoolName.trim()) ? schoolName.trim() : null
-    const safeGrade = (typeof grade === 'string' && grade.trim()) ? grade.trim() : null
     const safeGuardianEmail = typeof guardianEmail === 'string' ? guardianEmail.trim() : ''
     const safeAuthProvider = typeof authProvider === 'string' && authProvider ? authProvider : 'email'
 
@@ -72,7 +115,6 @@ export async function POST(req: Request) {
 
     const authUser = await ensureAuthUser()
 
-    // check existing user by email to avoid unique constraint violation
     const { data: existingRows, error: fetchErr } = await supabaseAdmin
       .from('users')
       .select('*')
@@ -83,24 +125,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: fetchErr.message }, { status: 500 })
     }
 
-    const token = crypto.randomUUID()
     let userRecord: DbUserRow | null = null
     let appliedInvite: InviteRow | null = null
     let isNewProfile = false
 
     if (Array.isArray(existingRows) && existingRows.length > 0) {
-      // existing user: update token and set consent back to pending, then resend
       const existing = existingRows[0]
       const { data: updated, error: updateErr } = await supabaseAdmin
         .from('users')
         .update({
           name: safeName,
           name_kana: safeNameKana,
-          school_name: safeSchoolName,
-          grade: safeGrade,
-          guardian_email: safeGuardianEmail || null,
-          guardian_consent: 'pending',
-          guardian_consent_token: token,
           auth_provider: safeAuthProvider,
         })
         .eq('user_id', existing.user_id)
@@ -118,13 +153,8 @@ export async function POST(req: Request) {
           user_id: authUser?.id || undefined,
           name: safeName,
           name_kana: safeNameKana,
-          school_name: safeSchoolName,
-          grade: safeGrade,
           email,
           auth_provider: safeAuthProvider,
-          guardian_email: safeGuardianEmail || null,
-          guardian_consent: 'pending',
-          guardian_consent_token: token,
         })
         .select()
         .single()
@@ -152,11 +182,6 @@ export async function POST(req: Request) {
             .update({
               name: safeName,
               name_kana: safeNameKana,
-              school_name: safeSchoolName,
-              grade: safeGrade,
-              guardian_email: safeGuardianEmail || null,
-              guardian_consent: 'pending',
-              guardian_consent_token: token,
               auth_provider: safeAuthProvider,
             })
             .eq('user_id', existing.user_id)
@@ -180,7 +205,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'failed to create or load user profile' }, { status: 500 })
     }
 
-    // If inviteToken provided, validate and apply role
     if (inviteToken) {
       try {
         const { data: invites, error: inviteErr } = await supabaseAdmin.from('invites').select('*').eq('token', inviteToken).limit(1).single()
@@ -192,11 +216,8 @@ export async function POST(req: Request) {
           const expired = inv.expires_at && inv.expires_at <= now
           const exhausted = (typeof maxUses === 'number' && maxUses > 0 && useCount >= maxUses)
           if (inv.status === 'active' && !expired && !exhausted) {
-            // 多重ロールに付与し、招待ロールをアクティブに切替
             await grantRoleToUser({ userId: userRecord.user_id, roleId: inv.target_role, makeCurrent: true })
-            // increment use_count
             await supabaseAdmin.from('invites').update({ use_count: (useCount + 1) }).eq('invite_id', inv.invite_id)
-            // record usage
             await supabaseAdmin.from('invite_usages').insert({ invite_id: inv.invite_id, used_by_user_id: userRecord.user_id })
             appliedInvite = inv
           }
@@ -206,8 +227,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // applicant自動付与は新規プロフィール作成時のみ。
-    // 既存ユーザーに毎回付与すると、管理者ロールだけのアカウントにも applicant が混入してしまう。
     try {
       if (isNewProfile) {
         await grantRoleToUser({ userId: userRecord.user_id, roleId: 'applicant', makeCurrent: !appliedInvite })
@@ -218,10 +237,75 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'multi-role schema is not ready. apply SQL migration first.' }, { status: 500 })
     }
 
-    const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const consentUrl = `${base.replace(/\/$/, '')}/consent?token=${token}`
+    let contestEntry: ContestEntryRow | null = null
+    let contestEntryToken = ''
 
-    // Determine `from` address: prefer RESEND_FROM env var, else build from app host.
+    if (safeGuardianEmail) {
+      const contest = await resolveCurrentContest()
+      if (!contest) {
+        return NextResponse.json({ error: 'active contest not found' }, { status: 400 })
+      }
+
+      const { data: existingEntry, error: existingEntryErr } = await supabaseAdmin
+        .from('contest_entries')
+        .select('*')
+        .eq('contest_id', contest.contest_id)
+        .eq('user_id', userRecord.user_id)
+        .limit(1)
+        .maybeSingle()
+
+      if (existingEntryErr) {
+        return NextResponse.json({ error: existingEntryErr.message }, { status: 500 })
+      }
+
+      contestEntryToken = randomUUID()
+      const existingContestEntry = (existingEntry || null) as ContestEntryRow | null
+      const nextConsent = existingContestEntry?.guardian_consent === 'approved' ? 'approved' : 'pending'
+
+      const entryPayload = {
+        contest_id: contest.contest_id,
+        user_id: userRecord.user_id,
+        guardian_email: safeGuardianEmail,
+        guardian_name: existingContestEntry?.guardian_name || null,
+        guardian_phone: existingContestEntry?.guardian_phone || null,
+        school_name: existingContestEntry?.school_name || null,
+        grade: existingContestEntry?.grade || null,
+        guardian_consent: nextConsent,
+        guardian_consent_at: nextConsent === 'approved' ? (existingContestEntry?.guardian_consent_at || new Date().toISOString()) : null,
+        guardian_consent_token: contestEntryToken,
+        guardian_agreed_ip: existingContestEntry?.guardian_agreed_ip || null,
+        work_id: existingContestEntry?.work_id || null,
+        work_number: existingContestEntry?.work_number ?? null,
+        entry_type: existingContestEntry?.entry_type || 'individual',
+        team_name: existingContestEntry?.team_name || null,
+        team_members: existingContestEntry?.team_members || null,
+        status: existingContestEntry?.status || 'draft',
+        is_primary_passed: existingContestEntry?.is_primary_passed ?? false,
+      }
+
+      const saveRes = existingContestEntry
+        ? await supabaseAdmin
+          .from('contest_entries')
+          .update(entryPayload)
+          .eq('entry_id', existingContestEntry.entry_id)
+          .select('*')
+          .single()
+        : await supabaseAdmin
+          .from('contest_entries')
+          .insert(entryPayload)
+          .select('*')
+          .single()
+
+      if (saveRes.error) {
+        return NextResponse.json({ error: saveRes.error.message }, { status: 500 })
+      }
+
+      contestEntry = saveRes.data as ContestEntryRow
+    }
+
+    const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const consentUrl = contestEntryToken ? `${base.replace(/\/$/, '')}/consent?token=${contestEntryToken}` : ''
+
     const candidateFrom = process.env.RESEND_FROM || (() => {
       let fromHost = 'example.com'
       try {
@@ -232,7 +316,6 @@ export async function POST(req: Request) {
       return `no-reply@${fromHost}`
     })()
 
-    // simple email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     let fromAddress = candidateFrom
     if (!emailRegex.test(fromAddress)) {
@@ -240,19 +323,18 @@ export async function POST(req: Request) {
       fromAddress = 'no-reply@example.com'
     }
 
-    // send guardian consent email only when guardianEmail provided
-    if (safeGuardianEmail) {
+    if (safeGuardianEmail && consentUrl) {
       try {
         await resend.emails.send({
           from: fromAddress,
           to: safeGuardianEmail,
           subject: '【要同意】保護者同意のお願い - キッズプログラミングコンテスト',
           html: `
-        <p>保護者様</p>
-        <p>${name || '参加者'} さんの登録がありました。下のリンクを押して保護者同意をお願いします。</p>
-        <p><a href="${consentUrl}">同意・確認ページへ</a></p>
-        <p>このメールに心当たりがない場合は無視してください。</p>
-      `,
+            <p>保護者様</p>
+            <p>${safeName} さんの登録がありました。下のリンクを押して保護者同意をお願いします。</p>
+            <p><a href="${consentUrl}">同意・確認ページへ</a></p>
+            <p>このメールに心当たりがない場合は無視してください。</p>
+          `,
         })
       } catch (sendErr) {
         console.error('[Resend API Error]:', sendErr)
@@ -260,7 +342,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, user: userRecord, guardianEmailSent: Boolean(safeGuardianEmail) })
+    return NextResponse.json({ ok: true, user: userRecord, contestEntry, guardianEmailSent: Boolean(safeGuardianEmail && contestEntryToken) })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }

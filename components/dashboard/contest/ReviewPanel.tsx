@@ -16,8 +16,10 @@ type Entry = {
   is_primary_passed: boolean
   primary_avg_score: number
   final_avg_score: number
+  school_name?: string | null
+  grade?: string | null
   works?: { title?: string; category?: string; short_description?: string; work_url?: string }
-  users?: { name?: string; school_name?: string; grade?: string }
+  users?: { name?: string }
 }
 
 type Phase = 'primary' | 'final'
@@ -178,6 +180,7 @@ function ReviewCard({
           <span className="badge badge-primary">#{entry.work_number}</span>
           <span className="font-semibold">{entry.works?.title || '無題'}</span>
           <span className="text-sm text-base-content/70">{entry.users?.name || '応募者'}</span>
+          <span className="text-xs text-base-content/60">{entry.school_name || '-'} / {entry.grade || '-'}</span>
           {phase === 'final' ? <span className="badge badge-outline">一次順位参考: {entry.primary_avg_score}</span> : null}
           {phase === 'final' ? <span className="badge badge-outline">最終集計: {entry.final_avg_score}</span> : null}
         </div>

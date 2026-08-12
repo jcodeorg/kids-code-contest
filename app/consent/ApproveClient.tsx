@@ -75,6 +75,12 @@ export default function ApproveClient({ token, initialStatus, initialData }: { t
     <div className="space-y-3">
       <p className="text-sm">現在のステータス: <strong>{status || 'pending'}</strong></p>
 
+      <div className="rounded-box bg-base-200 p-4 text-sm">
+        <p>お子さん: <strong>{name || '-'}</strong></p>
+        <p>ふりがな: <strong>{nameKana || '-'}</strong></p>
+        <p>メール: <strong>{initialData?.email || '-'}</strong></p>
+      </div>
+
       <div className="grid grid-cols-1 gap-3">
         <label className="form-control">
           <div className="label"><span className="label-text">お子さんのお名前</span></div>

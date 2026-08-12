@@ -78,7 +78,7 @@ export async function GET(req: Request) {
 
     let query = supabaseAdmin
       .from('contest_entries')
-      .select('entry_id,contest_id,work_id,user_id,work_number,entry_type,status,is_primary_passed,created_at,works(title,category,short_description,work_url,video_location),contests(title,year,status),users(name,school_name,grade)')
+      .select('entry_id,contest_id,work_id,user_id,work_number,entry_type,status,is_primary_passed,created_at,school_name,grade,guardian_name,guardian_email,guardian_phone,guardian_consent,guardian_consent_at,works(title,category,short_description,work_url,video_location),contests(title,year,status),users(name)')
       .order('work_number', { ascending: true })
 
     if (contestId !== null) query = query.eq('contest_id', contestId)
@@ -146,9 +146,10 @@ export async function POST(req: Request) {
     if (exists) return NextResponse.json({ error: 'already entered this contest' }, { status: 409 })
 
     const { data: profile, error: profileErr } = await supabaseAdmin
-      .from('users')
+      .from('contest_entries')
       .select('guardian_consent')
       .eq('user_id', auth.identity.userId)
+      .eq('contest_id', contestId)
       .limit(1)
       .maybeSingle()
 

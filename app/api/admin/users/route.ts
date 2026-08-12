@@ -48,6 +48,27 @@ async function getAssignedRoleMap(userIds: string[]) {
   return { map, mode: 'multi-role' as const }
 }
 
+async function getLatestGuardianConsentMap(userIds: string[]) {
+  if (!userIds.length) return {}
+
+  const consentRes = await supabaseAdmin
+    .from('contest_entries')
+    .select('user_id,guardian_consent,created_at')
+    .in('user_id', userIds)
+    .order('created_at', { ascending: false })
+
+  if (consentRes.error) {
+    throw consentRes.error
+  }
+
+  const map: Record<string, string> = {}
+  for (const row of consentRes.data || []) {
+    const key = row.user_id as string
+    if (!map[key]) map[key] = row.guardian_consent as string
+  }
+  return map
+}
+
 async function ensureAdmin(req: Request) {
   const authHeader = req.headers.get('authorization') || ''
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null
@@ -83,7 +104,7 @@ export async function GET(req: Request) {
     const guardian = url.searchParams.get('guardian') || undefined
     const user_id = url.searchParams.get('user_id') || undefined
 
-    const selectCols = 'user_id,email,name,name_kana,current_role_id,guardian_consent,is_active,created_at'
+    const selectCols = 'user_id,email,name,name_kana,current_role_id,is_active,created_at'
 
     // if user_id is provided, return single user
     if (user_id) {
@@ -95,6 +116,7 @@ export async function GET(req: Request) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
       const assigned = await getAssignedRoleMap([data.user_id])
+      const consentMap = await getLatestGuardianConsentMap([data.user_id])
       const assignedRoles = assigned.mode === 'multi-role'
         ? (assigned.map[data.user_id] || [data.current_role_id || 'applicant'])
         : [data.current_role_id || 'applicant']
@@ -103,6 +125,7 @@ export async function GET(req: Request) {
         user: {
           ...data,
           current_role_id: data.current_role_id || 'applicant',
+          guardian_consent: consentMap[data.user_id] || 'pending',
           assigned_role_ids: assignedRoles,
         },
       })
@@ -114,8 +137,6 @@ export async function GET(req: Request) {
       query = query.or(`email.ilike.%${q}%,name.ilike.%${q}%`)
     }
     if (role) query = query.eq('current_role_id', role)
-    if (guardian) query = query.eq('guardian_consent', guardian)
-
     const { data, error } = await query
     if (error && isColumnMissingError(error, 'current_role_id')) {
       throw new Error('users.current_role_id column is missing. Apply multi-role SQL migration first.')
@@ -125,17 +146,23 @@ export async function GET(req: Request) {
 
     const userIds = (data || []).map((u: { user_id: string }) => u.user_id)
     const assigned = await getAssignedRoleMap(userIds)
+    const consentMap = await getLatestGuardianConsentMap(userIds)
 
-    const users = (data || []).map((u: { user_id: string; current_role_id?: string | null } & Record<string, unknown>) => {
+    let users = (data || []).map((u: { user_id: string; current_role_id?: string | null } & Record<string, unknown>) => {
       const assignedRoles = assigned.mode === 'multi-role'
         ? (assigned.map[u.user_id] || [u.current_role_id || 'applicant'])
         : [u.current_role_id || 'applicant']
       return {
         ...u,
         current_role_id: u.current_role_id || 'applicant',
+        guardian_consent: consentMap[u.user_id] || 'pending',
         assigned_role_ids: assignedRoles,
       }
     })
+
+    if (guardian) {
+      users = users.filter((u) => (u.guardian_consent || 'pending') === guardian)
+    }
 
     return NextResponse.json({ users })
   } catch (err: unknown) {
