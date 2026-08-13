@@ -190,3 +190,64 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }
 }
+
+export async function PUT(req: Request) {
+  try {
+    const auth = await requireAuthWithRoles(req, ['applicant'])
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+    const body = await req.json()
+    const contestId = Number(body?.contest_id)
+    const entryId = Number(body?.entry_id)
+    const workId = typeof body?.work_id === 'string' ? body.work_id : ''
+    const entryType = typeof body?.entry_type === 'string' && body.entry_type ? body.entry_type : 'individual'
+
+    if (Number.isNaN(contestId) || !workId) {
+      return NextResponse.json({ error: 'contest_id and work_id required' }, { status: 400 })
+    }
+
+    const { data: ownWork, error: ownWorkErr } = await supabaseAdmin
+      .from('works')
+      .select('work_id')
+      .eq('work_id', workId)
+      .eq('user_id', auth.identity.userId)
+      .limit(1)
+      .maybeSingle()
+
+    if (ownWorkErr) return NextResponse.json({ error: ownWorkErr.message }, { status: 500 })
+    if (!ownWork) return NextResponse.json({ error: 'work not found or not owned' }, { status: 404 })
+
+    let targetEntryQuery = supabaseAdmin
+      .from('contest_entries')
+      .select('entry_id, contest_id, work_id, work_number, user_id, status')
+      .eq('contest_id', contestId)
+      .eq('user_id', auth.identity.userId)
+
+    if (Number.isFinite(entryId) && entryId > 0) {
+      targetEntryQuery = targetEntryQuery.eq('entry_id', entryId)
+    }
+
+    const { data: existingEntry, error: existingEntryErr } = await targetEntryQuery
+      .limit(1)
+      .maybeSingle()
+
+    if (existingEntryErr) return NextResponse.json({ error: existingEntryErr.message }, { status: 500 })
+    if (!existingEntry) return NextResponse.json({ error: 'entry not found' }, { status: 404 })
+
+    const { data: updated, error: updateErr } = await supabaseAdmin
+      .from('contest_entries')
+      .update({
+        work_id: workId,
+        entry_type: entryType,
+        status: 'submitted',
+      })
+      .eq('entry_id', existingEntry.entry_id)
+      .select()
+      .single()
+
+    if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
+    return NextResponse.json({ entry: updated })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
+  }
+}

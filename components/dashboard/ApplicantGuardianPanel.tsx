@@ -30,6 +30,7 @@ export default function ApplicantGuardianPanel() {
   const [entry, setEntry] = useState<ContestEntry | null>(null)
   const [guardianEmail, setGuardianEmail] = useState('')
   const [status, setStatus] = useState('')
+  const [detailOpen, setDetailOpen] = useState(false)
 
   function isValidEmail(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -130,11 +131,34 @@ export default function ApplicantGuardianPanel() {
   if (!profile) return <div className="alert alert-warning mb-4">サインインしてください。</div>
 
   const needsInitialInput = !guardianEmail
+  const consentStatus = entry?.guardian_consent || 'pending'
+  const statusLabel = consentStatus === 'approved' ? '同意済み' : consentStatus === 'rejected' ? '保護者の確認待ち' : '未同意'
+
+  if (!detailOpen) {
+    return (
+      <div className="card bg-base-100 shadow-md border border-base-200 mb-6">
+        <div className="card-body">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <h3 className="card-title text-lg">応募者情報と保護者同意</h3>
+              <span className="badge badge-outline">{statusLabel}</span>
+            </div>
+            <button className="btn btn-sm btn-primary" type="button" onClick={() => setDetailOpen(true)}>
+              詳細を表示
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="card bg-base-100 shadow-md border border-base-200 mb-6">
       <div className="card-body gap-4">
-        <h3 className="card-title">応募者情報と保護者同意</h3>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="card-title">応募者情報と保護者同意</h3>
+          <button className="btn btn-sm btn-ghost" type="button" onClick={() => setDetailOpen(false)}>閉じる</button>
+        </div>
 
         <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
           <div>お名前: <strong>{profile.name || '-'}</strong></div>
@@ -145,7 +169,7 @@ export default function ApplicantGuardianPanel() {
         {entry ? (
           <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
             <div>応募状態: <strong>{entry.status || 'draft'}</strong></div>
-            <div>保護者同意: <strong>{entry.guardian_consent || 'pending'}</strong>{entry.guardian_consent_at ? `（${new Date(entry.guardian_consent_at).toLocaleString()}）` : ''}</div>
+            <div>保護者同意: <strong>{statusLabel}</strong>{entry.guardian_consent_at ? `（${new Date(entry.guardian_consent_at).toLocaleString()}）` : ''}</div>
             <div>学校: <strong>{entry.school_name || '-'}</strong></div>
             <div>学年: <strong>{entry.grade || '-'}</strong></div>
             <div>保護者氏名: <strong>{entry.guardian_name || '-'}</strong></div>

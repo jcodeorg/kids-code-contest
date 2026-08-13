@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import AdminPanel from './admin/AdminPanel'
 import ApplicantGuardianPanel from './ApplicantGuardianPanel'
@@ -15,6 +15,32 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
   const rootRole = parts[0] && validRoleNames.has(parts[0]) ? parts[0] : ''
   const feature = parts[1] || ''
   const role = rootRole || paramsRole || 'applicant'
+  const [applicantContests, setApplicantContests] = useState<Array<{ contest_id: number; title: string; year: number; status: string }>>([])
+  const [selectedApplicantContestId, setSelectedApplicantContestId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (role !== 'applicant') return
+
+    async function loadApplicantContestState() {
+      try {
+        const res = await fetch('/api/contests')
+        if (!res.ok) return
+        const data = await res.json()
+        const contests = Array.isArray(data?.contests) ? data.contests : []
+        setApplicantContests(contests)
+
+        const activeContest = data?.active_contest
+        const nextSelectedId = activeContest?.contest_id ?? contests[0]?.contest_id ?? null
+        if (nextSelectedId) {
+          setSelectedApplicantContestId((current) => current ?? nextSelectedId)
+        }
+      } catch {
+        setApplicantContests([])
+      }
+    }
+
+    void loadApplicantContestState()
+  }, [role])
 
   const titleMap: Record<string, string> = {
     applicant: '応募者ダッシュボード',
@@ -25,12 +51,13 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
     judge: '審査員ダッシュボード',
     admin: '管理者ダッシュボード',
   }
-  const title = titleMap[role] || `${role} ダッシュボード`
+  const applicantContestName = applicantContests.find((contest) => contest.contest_id === selectedApplicantContestId)?.title || 'コンテスト未選択'
+  const title = role === 'applicant' ? applicantContestName : (titleMap[role] || `${role} ダッシュボード`)
 
   const roleSections: Record<string, { title: string; content: React.ReactNode }[]> = {
     applicant: [
-      { title: '応募者情報と保護者同意', content: <ApplicantGuardianPanel /> },
-      { title: '作品ライブラリと応募', content: <ApplicantContestPanel /> },
+      { title: '応募者情報と保護者同意', content: <ApplicantGuardianPanel selectedContestId={selectedApplicantContestId} /> },
+      { title: '作品ライブラリと応募', content: <ApplicantContestPanel contests={applicantContests} selectedContestId={selectedApplicantContestId} onSelectedContestIdChange={setSelectedApplicantContestId} /> },
       { title: '提出状況', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><p>応募開始前・審査中・結果待ちの管理状況をここに表示します。</p></div></div> },
     ],
     staff: [
@@ -97,7 +124,27 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
   return (
     <div className="w-full px-4 py-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-4">{title}</h1>
+        {role === 'applicant' ? (
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <h1 className="text-3xl font-bold">{title}</h1>
+            {applicantContests.length > 0 ? (
+              <label className="flex items-center gap-2 text-sm">
+                <span className="text-base-content/70">コンテスト</span>
+                <select
+                  className="select select-bordered select-sm"
+                  value={selectedApplicantContestId ?? ''}
+                  onChange={(event) => setSelectedApplicantContestId(event.target.value ? Number(event.target.value) : null)}
+                >
+                  {applicantContests.map((contest) => (
+                    <option key={contest.contest_id} value={contest.contest_id}>[{contest.year}] {contest.title}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+        ) : (
+          <h1 className="text-3xl font-bold mb-4">{title}</h1>
+        )}
         <div className="space-y-6">
           {currentSections.map((section) => (
             <div key={section.title}>{section.content}</div>

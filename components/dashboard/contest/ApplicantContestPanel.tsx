@@ -19,6 +19,12 @@ type Contest = {
   status: string
 }
 
+type ApplicantContestPanelProps = {
+  contests: Contest[]
+  selectedContestId: number | null
+  onSelectedContestIdChange: (nextContestId: number | null) => void
+}
+
 type Entry = {
   entry_id: number
   contest_id: number
@@ -29,14 +35,12 @@ type Entry = {
   works?: { title?: string }
 }
 
-export default function ApplicantContestPanel() {
+export default function ApplicantContestPanel({ contests, selectedContestId, onSelectedContestIdChange }: ApplicantContestPanelProps) {
   const [works, setWorks] = useState<Work[]>([])
-  const [contests, setContests] = useState<Contest[]>([])
   const [entries, setEntries] = useState<Entry[]>([])
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const [selectedContestId, setSelectedContestId] = useState<number | null>(null)
   const [selectedWorkId, setSelectedWorkId] = useState('')
 
   async function buildAuthHeaders(withJson = false) {
@@ -64,11 +68,9 @@ export default function ApplicantContestPanel() {
 
       if (worksRes.ok) setWorks(worksJson.works || [])
       if (contestsRes.ok) {
-        const nextContests = contestsJson.contests || []
-        setContests(nextContests)
-        const preferredContestId = contestsJson.active_contest?.contest_id ?? nextContests[0]?.contest_id ?? null
+        const preferredContestId = contestsJson.active_contest?.contest_id ?? contests[0]?.contest_id ?? null
         if (preferredContestId && !selectedContestId) {
-          setSelectedContestId(preferredContestId)
+          onSelectedContestIdChange(preferredContestId)
         }
       }
       if (entriesRes.ok) setEntries(entriesJson.entries || [])
@@ -81,7 +83,7 @@ export default function ApplicantContestPanel() {
     } finally {
       setLoading(false)
     }
-  }, [selectedContestId])
+  }, [onSelectedContestIdChange, selectedContestId])
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -92,30 +94,43 @@ export default function ApplicantContestPanel() {
 
   const openContests = useMemo(() => contests.filter((c) => c.status === 'accepting' || c.status === 'draft'), [contests])
 
-  async function submitEntry() {
-    if (!selectedContestId || !selectedWorkId) {
+  async function submitEntry(targetWorkId?: string, mode: 'create' | 'replace' = 'create') {
+    const effectiveWorkId = targetWorkId || selectedWorkId
+    if (!selectedContestId || !effectiveWorkId) {
       setStatus('コンテストと作品を選択してください')
       return
     }
-    setStatus('応募処理中...')
+
+    const currentEntry = entries.find((entry) => entry.contest_id === selectedContestId)
+    const isReplace = mode === 'replace' && !!currentEntry
+
+    setStatus(isReplace ? '応募作品を変更中...' : '応募処理中...')
     try {
       const headers = await buildAuthHeaders(true)
       const res = await fetch('/api/entries', {
-        method: 'POST',
+        method: isReplace ? 'PUT' : 'POST',
         headers,
-        body: JSON.stringify({ contest_id: selectedContestId, work_id: selectedWorkId, entry_type: 'individual' }),
+        body: JSON.stringify({
+          contest_id: selectedContestId,
+          work_id: effectiveWorkId,
+          entry_id: currentEntry?.entry_id,
+          entry_type: 'individual',
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setStatus('応募失敗: ' + (data?.error || res.status))
+        setStatus((isReplace ? '変更失敗' : '応募失敗') + ': ' + (data?.error || res.status))
         return
       }
-      setStatus(`応募完了: 作品番号 #${data.entry?.work_number ?? '-'}`)
+      setSelectedWorkId(effectiveWorkId)
+      setStatus(isReplace ? `応募作品を変更しました: 作品番号 #${data.entry?.work_number ?? '-'}` : `応募完了: 作品番号 #${data.entry?.work_number ?? '-'}`)
       await loadAll()
     } catch (err: unknown) {
-      setStatus(err instanceof Error ? err.message : '応募に失敗しました')
+      setStatus(err instanceof Error ? err.message : '処理に失敗しました')
     }
   }
+
+  const selectedContestName = selectedContestId ? contests.find((contest) => contest.contest_id === selectedContestId)?.title || '選択中のコンテスト' : '未選択'
 
   return (
     <div className="space-y-6">
@@ -126,62 +141,38 @@ export default function ApplicantContestPanel() {
             <Link className="btn btn-primary" href="/applicant/works/new">作品を追加</Link>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="table table-zebra">
-              <thead><tr><th>タイトル</th><th>カテゴリ</th><th>説明</th><th>URL</th><th>操作</th></tr></thead>
-              <tbody>
-                {works.map((w) => (
-                  <tr key={w.work_id}>
-                    <td>{w.title}</td>
-                    <td>{w.category}</td>
-                    <td>{w.short_description}</td>
-                    <td className="max-w-xs truncate">{w.work_url}</td>
-                    <td>
-                      <Link className="btn btn-sm btn-outline" href={`/applicant/works/${w.work_id}`}>編集</Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section className="card bg-base-100 shadow-md border border-base-200">
-        <div className="card-body gap-4">
-          <h3 className="card-title">コンテスト応募</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <select
-              className="select select-bordered"
-              value={selectedContestId ?? ''}
-              onChange={(e) => setSelectedContestId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">コンテストを選択</option>
-              {openContests.map((c) => (
-                <option key={c.contest_id} value={c.contest_id}>[{c.year}] {c.title} ({c.status})</option>
-              ))}
-            </select>
-            <select className="select select-bordered" value={selectedWorkId} onChange={(e) => setSelectedWorkId(e.target.value)}>
-              <option value="">応募作品を選択</option>
-              {works.map((w) => <option key={w.work_id} value={w.work_id}>{w.title}</option>)}
-            </select>
-          </div>
-          <div>
-            <button className="btn btn-primary" onClick={submitEntry}>この作品で応募する</button>
+          <div className="rounded-box bg-base-200 p-3 text-sm">
+            <span>対象コンテスト: <strong>{selectedContestName}</strong></span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="table table-zebra">
-              <thead><tr><th>コンテスト</th><th>作品</th><th>作品番号</th><th>状態</th></tr></thead>
+              <thead><tr><th>タイトル</th><th>カテゴリ</th><th>説明</th><th>URL</th><th>応募状況</th><th>操作</th></tr></thead>
               <tbody>
-                {entries.map((entry) => (
-                  <tr key={entry.entry_id}>
-                    <td>{entry.contests?.title || entry.contest_id}</td>
-                    <td>{entry.works?.title || entry.work_id}</td>
-                    <td>#{entry.work_number}</td>
-                    <td>{entry.status}</td>
-                  </tr>
-                ))}
+                {works.map((w) => {
+                  const matchingEntry = entries.find((entry) => entry.contest_id === selectedContestId && entry.work_id === w.work_id)
+                  const statusLabel = matchingEntry ? `応募済み (#${matchingEntry.work_number})` : '未応募'
+
+                  return (
+                    <tr key={w.work_id}>
+                      <td>{w.title}</td>
+                      <td>{w.category}</td>
+                      <td>{w.short_description}</td>
+                      <td className="max-w-xs truncate">{w.work_url}</td>
+                      <td>{statusLabel}</td>
+                      <td className="flex flex-wrap gap-2">
+                        <button
+                          className="btn btn-sm btn-primary"
+                          type="button"
+                          onClick={() => void submitEntry(w.work_id, matchingEntry ? 'replace' : 'create')}
+                        >
+                          {matchingEntry ? '応募作品を変更' : '応募する'}
+                        </button>
+                        <Link className="btn btn-sm btn-outline" href={`/applicant/works/${w.work_id}`}>編集</Link>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
