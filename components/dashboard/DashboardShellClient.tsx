@@ -59,30 +59,27 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
       { title: '二次集計', content: <ReviewPanel phase="final" roleLabel="二次集計" /> },
     ],
     admin: [
-      { title: 'システム管理', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><h3 className="card-title text-lg">システム管理</h3><p className="text-base-content/70">システム設定・通知・アクセス制御などを管理します。</p></div></div> },
       { title: 'ユーザー管理', content: <AdminPanel /> },
+      { title: 'システム管理', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><h3 className="card-title text-lg">システム管理</h3><p className="text-base-content/70">システム設定・通知・アクセス制御などを管理します。</p></div></div> },
     ],
   }
 
   const featureMap: Record<string, Record<string, number[]>> = {
     staff: {
-      reviews: [0],
       submissions: [1],
       aggregate: [2],
     },
     judge: {
-      reviews: [0],
       top_submissions: [1],
       aggregate: [2],
     },
     contest_admin: {
       aggregate_1: [1],
       aggregate_2: [2],
-      settings: [0],
     },
     admin: {
-      system: [0],
-      users: [1],
+      system: [1],
+      users: [0],
     },
   }
 

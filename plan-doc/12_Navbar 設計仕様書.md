@@ -111,8 +111,8 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
    ],
 
   admin: [
-    { label: 'システム管理', href: '/admin/system' },
     { label: 'ユーザー管理', href: '/admin' },
+    { label: 'システム管理', href: '/admin/system' },
   ],
 };
 
