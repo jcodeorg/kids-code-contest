@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import Image from 'next/image'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type EasyMDE from 'easymde'
 import { supabase } from '../../../lib/supabase/client'
 
 export type WorkFormValues = {
@@ -23,6 +25,17 @@ const CATEGORY_OPTIONS = [
   { value: 'other', label: 'その他' },
 ] as const
 
+const DEFAULT_DETAILED_DESCRIPTION = `## どんな さくひんか
+
+
+## つくりかた
+
+
+## くふうしたところ
+
+
+## てつだってもらった ところ`
+
 type SubmitResult = { ok: true } | { ok: false; error?: string }
 
 export default function WorkForm({
@@ -40,27 +53,62 @@ export default function WorkForm({
   onCancel?: () => void
   onSuccess?: () => void
 }) {
-  const [title, setTitle] = useState(initialValues?.title || '')
-  const [category, setCategory] = useState(initialValues?.category || 'scratch')
-  const [shortDescription, setShortDescription] = useState(initialValues?.short_description || '')
-  const [detailedDescription, setDetailedDescription] = useState(initialValues?.detailed_description || '')
-  const [workUrl, setWorkUrl] = useState(initialValues?.work_url || '')
-  const [videoType, setVideoType] = useState(initialValues?.video_type || 'youtube_url')
-  const [videoLocation, setVideoLocation] = useState(initialValues?.video_location || '')
-  const [thumbnailUrl, setThumbnailUrl] = useState(initialValues?.thumbnail_url || '')
-  const [videoFileUrl, setVideoFileUrl] = useState(initialValues?.video_file_url || '')
+  function looksLikeMp4Url(value: string) {
+    const v = value.trim().toLowerCase()
+    if (!v) return false
+    return v.endsWith('.mp4') || v.includes('.mp4?') || v.includes('/uploads/video/')
+  }
+
+  const getInitialFormState = (values?: Partial<WorkFormValues>) => ({
+    title: values?.title || '',
+    category: values?.category || 'scratch',
+    shortDescription: values?.short_description || '',
+    detailedDescription:
+      values?.detailed_description || (values?.work_id ? '' : DEFAULT_DETAILED_DESCRIPTION),
+    workUrl: values?.work_url || '',
+    videoType: values?.video_type || 'youtube_url',
+    videoLocation: values?.video_location || '',
+    thumbnailUrl: values?.thumbnail_url || '',
+    videoFileUrl: values?.video_file_url || '',
+  })
+
+  const [title, setTitle] = useState(() => getInitialFormState(initialValues).title)
+  const [category, setCategory] = useState(() => getInitialFormState(initialValues).category)
+  const [shortDescription, setShortDescription] = useState(() => getInitialFormState(initialValues).shortDescription)
+  const [detailedDescription, setDetailedDescription] = useState(() => getInitialFormState(initialValues).detailedDescription)
+  const [workUrl, setWorkUrl] = useState(() => getInitialFormState(initialValues).workUrl)
+  const [videoType, setVideoType] = useState(() => getInitialFormState(initialValues).videoType)
+  const [videoLocation, setVideoLocation] = useState(() => getInitialFormState(initialValues).videoLocation)
+  const [thumbnailUrl, setThumbnailUrl] = useState(() => getInitialFormState(initialValues).thumbnailUrl)
+  const [videoFileUrl, setVideoFileUrl] = useState(() => {
+    const state = getInitialFormState(initialValues)
+    const fallbackMp4Url = state.videoLocation || ''
+    return state.videoFileUrl || (looksLikeMp4Url(fallbackMp4Url) ? fallbackMp4Url : '')
+  })
+
+  const resetFormFromValues = useCallback((values?: Partial<WorkFormValues>) => {
+    const next = getInitialFormState(values)
+    const fallbackMp4Url = next.videoLocation || ''
+
+    setTitle(next.title)
+    setCategory(next.category)
+    setShortDescription(next.shortDescription)
+    setDetailedDescription(next.detailedDescription)
+    setWorkUrl(next.workUrl)
+    setVideoType(next.videoType)
+    setVideoLocation(next.videoLocation)
+    setThumbnailUrl(next.thumbnailUrl)
+    setVideoFileUrl(next.videoFileUrl || (looksLikeMp4Url(fallbackMp4Url) ? fallbackMp4Url : ''))
+  }, [])
 
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false)
   const [uploadingVideo, setUploadingVideo] = useState(false)
 
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
-
-  function looksLikeMp4Url(value: string) {
-    const v = value.trim().toLowerCase()
-    if (!v) return false
-    return v.endsWith('.mp4') || v.includes('.mp4?') || v.includes('/uploads/video/')
-  }
+  const detailedTextRef = useRef<HTMLTextAreaElement | null>(null)
+  const easyMdeRef = useRef<EasyMDE | null>(null)
+  const initialDetailedDescriptionRef = useRef(detailedDescription)
 
   async function buildAuthHeaders() {
     const session = await supabase.auth.getSession()
@@ -72,20 +120,63 @@ export default function WorkForm({
 
   useEffect(() => {
     if (!initialValues) return
-    setTitle(initialValues.title || '')
-    setCategory(initialValues.category || 'scratch')
-    setShortDescription(initialValues.short_description || '')
-    setDetailedDescription(initialValues.detailed_description || '')
-    setWorkUrl(initialValues.work_url || '')
-    setVideoType(initialValues.video_type || 'youtube_url')
-    setVideoLocation(initialValues.video_location || '')
-    setThumbnailUrl(initialValues.thumbnail_url || '')
-    const fallbackMp4Url = initialValues.video_location || ''
-    setVideoFileUrl(initialValues.video_file_url || (looksLikeMp4Url(fallbackMp4Url) ? fallbackMp4Url : ''))
-  }, [initialValues])
+
+    const timeoutId = window.setTimeout(() => {
+      resetFormFromValues(initialValues)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [initialValues, resetFormFromValues])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !detailedTextRef.current || easyMdeRef.current) return
+
+    let isActive = true
+
+    void (async () => {
+      await import('easymde/dist/easymde.min.css')
+      const imported = await import('easymde')
+      const EasyMDEConstructor = (imported.default ?? imported) as typeof EasyMDE
+
+      if (!isActive || typeof window === 'undefined') return
+
+      const editor = new EasyMDEConstructor({
+        element: detailedTextRef.current!,
+        initialValue: initialDetailedDescriptionRef.current,
+        spellChecker: false,
+        status: false,
+        toolbar: ['bold', 'italic', 'heading', 'unordered-list', 'ordered-list', 'quote', 'code', 'link'],
+        hideIcons: ['guide'],
+        autoDownloadFontAwesome: true,
+      })
+
+      easyMdeRef.current = editor
+      editor.codemirror.on('change', () => setDetailedDescription(editor.value()))
+    })()
+
+    return () => {
+      isActive = false
+      easyMdeRef.current?.toTextArea()
+      easyMdeRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!easyMdeRef.current) return
+    const nextValue = detailedDescription || ''
+    if (easyMdeRef.current.value() !== nextValue) {
+      easyMdeRef.current.value(nextValue)
+    }
+  }, [detailedDescription])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const detailedDescriptionValue = (easyMdeRef.current?.value() || detailedDescription).trim()
+    if (!detailedDescriptionValue) {
+      setStatus('ながい せつめいを入力してください')
+      return
+    }
+
     const resolvedVideoLocation =
       videoType === 'mp4_file' ? (videoFileUrl || videoLocation).trim() : videoLocation.trim()
     if (!resolvedVideoLocation) {
@@ -101,7 +192,7 @@ export default function WorkForm({
         title,
         category,
         short_description: shortDescription,
-        detailed_description: detailedDescription,
+        detailed_description: detailedDescriptionValue,
         work_url: workUrl,
         video_type: videoType,
         video_location: resolvedVideoLocation,
@@ -251,12 +342,18 @@ export default function WorkForm({
 
         <div>
           <label htmlFor="short-desc" className="block text-sm font-medium mb-1">みじかい せつめい</label>
-          <input id="short-desc" className="input input-bordered w-full" placeholder="みじかい せつめい" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} required />
+          <textarea id="short-desc" className="textarea textarea-bordered w-full" placeholder="みじかい せつめい" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} required />
         </div>
 
         <div>
-          <label htmlFor="detailed-desc" className="block text-sm font-medium mb-1">ながい せつめい</label>
-          <textarea id="detailed-desc" className="textarea textarea-bordered w-full" placeholder="ながい せつめい" value={detailedDescription} onChange={(e) => setDetailedDescription(e.target.value)} required />
+          <label htmlFor="detailed-desc" className="block text-sm font-medium mb-1">ながい せつめい（Markdown）</label>
+          <textarea
+            ref={detailedTextRef}
+            id="detailed-desc"
+            className="easy-mde-editor w-full min-h-40"
+            placeholder="# 見出し\n- 箇条書き\n- **太字**\n- `コード`"
+          />
+          <div className="mt-1 text-xs text-gray-500"># 見出し / - 箇条書き / **太字** / `コード` を使えます</div>
         </div>
 
         <div>
@@ -282,7 +379,14 @@ export default function WorkForm({
           {uploadingThumbnail ? <div className="text-sm text-gray-500">アップロード中...</div> : null}
           {thumbnailUrl ? (
             <div className="mt-2 flex flex-col gap-2">
-              <img src={thumbnailUrl} alt="thumbnail" className="w-full h-auto max-h-40 object-contain" />
+              <Image
+                src={thumbnailUrl}
+                alt="thumbnail"
+                width={1200}
+                height={800}
+                unoptimized
+                className="w-full h-auto max-h-40 object-contain"
+              />
               <div>
                 <button type="button" className="btn btn-sm btn-outline btn-error" onClick={handleDeleteThumbnail}>画像を削除</button>
               </div>
