@@ -91,7 +91,8 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
     ? [roleSections[role][0]]
     : [{ title: 'ダッシュボード', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><p>ここは <strong>{role}</strong> 向けのダッシュボードです。</p><p className="text-base-content/70">必要なウィジェットやリンクをここに追加してください。</p></div></div> }]
 
-  const currentSections = matchedFeatureSection || (!feature ? rootSection : roleSections[role] || rootSection)
+  const applicantRootSections = role === 'applicant' ? roleSections.applicant || rootSection : rootSection
+  const currentSections = matchedFeatureSection || (!feature ? applicantRootSections : roleSections[role] || rootSection)
 
   return (
     <div className="w-full px-4 py-8">

@@ -24,7 +24,7 @@ export const ROLE_LABELS: Record<string, string> = {
 
 export const NAV_ITEMS: Record<string, NavItem[]> = {
   applicant: [
-    { label: 'ダッシュボード', href: '/applicant' },
+    { label: '私の作品', href: '/applicant' },
   ],
   staff: [
     { label: '私の審査', href: '/staff' },
