@@ -8,7 +8,6 @@ type EditableUser = {
   user_id: string
   email: string
   name?: string
-  name_kana?: string
   current_role_id?: string
   assigned_role_ids?: string[]
   is_active?: boolean
@@ -24,7 +23,6 @@ export default function EditUserPage() {
   const [assignedRoles, setAssignedRoles] = useState<string[]>([])
   const [isActive, setIsActive] = useState(true)
   const [name, setName] = useState('')
-  const [nameKana, setNameKana] = useState('')
   const ROLES = ['applicant', 'staff', 'contest_admin', 'staff_primary', 'staff_manager', 'judge', 'admin']
 
   async function buildAuthHeaders(withJson = false) {
@@ -54,7 +52,6 @@ export default function EditUserPage() {
           setAssignedRoles(assigned)
           setIsActive(Boolean(d.user.is_active))
           setName(d.user.name || '')
-          setNameKana(d.user.name_kana || '')
         }
       } catch {
         // ignore
@@ -87,7 +84,6 @@ export default function EditUserPage() {
           assigned_roles: assignedRoles,
           is_active: isActive,
           name,
-          name_kana: nameKana,
         }),
       })
       const d = await res.json()
@@ -135,14 +131,10 @@ export default function EditUserPage() {
           <div className="badge badge-outline">メール: {user.email}</div>
 
           <form onSubmit={handleUpdate} className="space-y-4 mt-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
               <label className="form-control w-full">
                 <div className="label"><span className="label-text">氏名</span></div>
                 <input className="input input-bordered w-full" value={name} onChange={(e) => setName(e.target.value)} placeholder="山田 太郎" />
-              </label>
-              <label className="form-control w-full">
-                <div className="label"><span className="label-text">フリガナ</span></div>
-                <input className="input input-bordered w-full" value={nameKana} onChange={(e) => setNameKana(e.target.value)} placeholder="ヤマダ タロウ" />
               </label>
             </div>
 

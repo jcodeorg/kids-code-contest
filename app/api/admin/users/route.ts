@@ -104,7 +104,7 @@ export async function GET(req: Request) {
     const guardian = url.searchParams.get('guardian') || undefined
     const user_id = url.searchParams.get('user_id') || undefined
 
-    const selectCols = 'user_id,email,name,name_kana,current_role_id,is_active,created_at'
+    const selectCols = 'user_id,email,name,current_role_id,is_active,created_at'
 
     // if user_id is provided, return single user
     if (user_id) {
@@ -176,7 +176,7 @@ export async function PUT(req: Request) {
     if (!adminCheck.ok) return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
 
     const body = await req.json()
-    const { user_id, role, is_active, name, name_kana, assigned_roles, current_role_id } = body
+    const { user_id, role, is_active, name, assigned_roles, current_role_id } = body
     if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 })
 
     const updates: Record<string, unknown> = {}
@@ -185,12 +185,6 @@ export async function PUT(req: Request) {
       if (name.length > 200) return NextResponse.json({ error: 'name too long' }, { status: 400 })
       updates.name = name.trim()
     }
-    if (typeof name_kana === 'string') {
-      const v = name_kana.trim()
-      if (v.length > 200) return NextResponse.json({ error: 'name_kana too long' }, { status: 400 })
-      updates.name_kana = v
-    }
-
     // Backward compatibility: role単体更新を assigned_roles に変換
     let assignedRoles: string[] | null = null
     if (Array.isArray(assigned_roles)) {

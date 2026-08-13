@@ -6,7 +6,6 @@ import { supabase } from '../../lib/supabase/client'
 type ApplicantProfile = {
   user_id: string
   name: string | null
-  name_kana: string | null
   email: string
 }
 
@@ -52,7 +51,7 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
 
       const { data: profileData } = await supabase
         .from('users')
-        .select('user_id,name,name_kana,email')
+        .select('user_id,name,email')
         .eq('user_id', user.id)
         .single()
 
@@ -115,7 +114,7 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: profile.name,
-          nameKana: profile.name_kana,
+          nameKana: entry?.name_kana || '',
           email: profile.email,
           guardianEmail,
           contest_id: selectedContestId,
@@ -184,7 +183,7 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
         <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
           <div>ニックネーム: <strong>{profile.name || '-'}</strong></div>
           <div>正式な名前: <strong>{entry?.name || '-'}</strong></div>
-          <div>かな: <strong>{entry?.name_kana || profile.name_kana || '-'}</strong></div>
+          <div>かな: <strong>{entry?.name_kana || '-'}</strong></div>
           <div>メール: <strong>{profile.email}</strong></div>
         </div>
 

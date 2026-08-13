@@ -70,13 +70,12 @@ async function resolveCurrentContest() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { name, nameKana, email, guardianEmail, inviteToken, authProvider, contest_id: contestIdFromBody } = body || {}
+    const { name, email, guardianEmail, inviteToken, authProvider, contest_id: contestIdFromBody } = body || {}
     if (!email) {
       return NextResponse.json({ error: 'email is required' }, { status: 400 })
     }
 
     const safeName = (typeof name === 'string' && name.trim()) ? name.trim() : (typeof email === 'string' ? email.split('@')[0] : 'ユーザー')
-    const safeNameKana = (typeof nameKana === 'string' && nameKana.trim()) ? nameKana.trim() : null
     const safeGuardianEmail = typeof guardianEmail === 'string' ? guardianEmail.trim() : ''
     const safeAuthProvider = typeof authProvider === 'string' && authProvider ? authProvider : 'email'
 
@@ -137,7 +136,6 @@ export async function POST(req: Request) {
         .from('users')
         .update({
           name: safeName,
-          name_kana: safeNameKana,
           auth_provider: safeAuthProvider,
         })
         .eq('user_id', existing.user_id)
@@ -154,7 +152,6 @@ export async function POST(req: Request) {
         .insert({
           user_id: authUser?.id || undefined,
           name: safeName,
-          name_kana: safeNameKana,
           email,
           auth_provider: safeAuthProvider,
         })
@@ -183,7 +180,6 @@ export async function POST(req: Request) {
             .from('users')
             .update({
               name: safeName,
-              name_kana: safeNameKana,
               auth_provider: safeAuthProvider,
             })
             .eq('user_id', existing.user_id)

@@ -51,7 +51,7 @@ export default async function Page({ searchParams }: Props) {
 
   const initialData = {
     name: data.name || userInfo?.name || '',
-    name_kana: data.name_kana || userInfo?.name_kana || '',
+    name_kana: data.name_kana || '',
     school_name: data.school_name,
     grade: data.grade,
     email: userInfo?.email,
