@@ -9,6 +9,7 @@ type Contest = {
   title: string
   year: number
   status: string
+  is_active?: boolean | null
   entry_start_at?: string | null
   entry_end_at?: string | null
 }
@@ -80,6 +81,27 @@ export default function ContestAdminJudgingPanel() {
     }, 0)
     return () => window.clearTimeout(timerId)
   }, [contestId, phase, loadRanking])
+
+  async function setActiveContest(contest: Contest) {
+    setStatus('アクティブコンテストを切り替え中...')
+    try {
+      const headers = await buildAuthHeaders(true)
+      const res = await fetch('/api/admin/contests', {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ contest_id: contest.contest_id, is_active: true }),
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        setStatus('切替失敗: ' + (d?.error || res.status))
+        return
+      }
+      setStatus(`「${contest.title}」をアクティブコンテストに設定しました`)
+      await loadContests()
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : '切替に失敗しました')
+    }
+  }
 
   async function deleteContest(contest: Contest) {
     if (!window.confirm(`「${contest.title}」を削除しますか？`)) return
@@ -174,12 +196,15 @@ export default function ContestAdminJudgingPanel() {
               </thead>
               <tbody>
                 {contests.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center text-base-content/60">登録されたコンテストはありません</td></tr>
+                  <tr><td colSpan={6} className="text-center text-base-content/60">登録されたコンテストはありません</td></tr>
                 ) : contests.map((contest) => (
                   <tr key={contest.contest_id}>
                     <td>{contest.title}</td>
                     <td>{contest.year}</td>
                     <td>{contest.status}</td>
+                    <td>
+                      {contest.is_active ? <span className="badge badge-success">アクティブ</span> : <span className="badge badge-ghost">通常</span>}
+                    </td>
                     <td>
                       {contest.entry_start_at && contest.entry_end_at
                         ? `${new Date(contest.entry_start_at).toLocaleString()} ~ ${new Date(contest.entry_end_at).toLocaleString()}`
@@ -189,6 +214,9 @@ export default function ContestAdminJudgingPanel() {
                       <button className="btn btn-xs btn-ghost" onClick={() => router.push(`/contest_admin/${contest.contest_id}/edit`)}>
                         編集
                       </button>
+                      {!contest.is_active ? (
+                        <button className="btn btn-xs btn-primary" onClick={() => setActiveContest(contest)}>有効化</button>
+                      ) : null}
                       <button className="btn btn-xs btn-error" onClick={() => deleteContest(contest)}>削除</button>
                     </td>
                   </tr>

@@ -18,6 +18,7 @@ export default function ContestEditorForm({ mode, contestId }: { mode: 'create' 
   const [title, setTitle] = useState('')
   const [year, setYear] = useState(new Date().getFullYear())
   const [status, setStatus] = useState('draft')
+  const [isActive, setIsActive] = useState(false)
   const [entryStartAt, setEntryStartAt] = useState('')
   const [entryEndAt, setEntryEndAt] = useState('')
   const [loading, setLoading] = useState(mode === 'edit')
@@ -56,6 +57,7 @@ export default function ContestEditorForm({ mode, contestId }: { mode: 'create' 
           setTitle(contest.title || '')
           setYear(contest.year || new Date().getFullYear())
           setStatus(contest.status || 'draft')
+          setIsActive(Boolean(contest.is_active))
           setEntryStartAt(contest.entry_start_at ? contest.entry_start_at.slice(0, 16) : '')
           setEntryEndAt(contest.entry_end_at ? contest.entry_end_at.slice(0, 16) : '')
         } catch (err: unknown) {
@@ -91,6 +93,7 @@ export default function ContestEditorForm({ mode, contestId }: { mode: 'create' 
         title,
         year,
         status,
+        is_active: isActive,
         entry_start_at: entryStartAt,
         entry_end_at: entryEndAt,
       }
@@ -148,6 +151,13 @@ export default function ContestEditorForm({ mode, contestId }: { mode: 'create' 
                 <option value="final_judging">final_judging</option>
                 <option value="completed">completed</option>
               </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="checkbox checkbox-primary" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+                <span>このコンテストをアクティブコンテストとして設定する</span>
+              </label>
             </div>
 
             <div>

@@ -14,10 +14,16 @@ create table if not exists public.contests (
   year int not null,
   status varchar(20) not null default 'draft'
     check (status in ('draft', 'accepting', 'primary_judging', 'final_judging', 'completed')),
+  is_active boolean not null default false,
   entry_start_at timestamptz not null,
   entry_end_at timestamptz not null,
   created_at timestamptz not null default now()
 );
+
+-- is_active = true がシステム内に1件しか存在できない制約（インデックス）を作成
+create unique index if not exists uq_contests_single_active
+on public.contests (is_active)
+where is_active = true;
 
 create index if not exists idx_contests_year on public.contests(year desc);
 create index if not exists idx_contests_status on public.contests(status);

@@ -63,7 +63,14 @@ export default function ApplicantContestPanel() {
       const entriesJson = await entriesRes.json()
 
       if (worksRes.ok) setWorks(worksJson.works || [])
-      if (contestsRes.ok) setContests(contestsJson.contests || [])
+      if (contestsRes.ok) {
+        const nextContests = contestsJson.contests || []
+        setContests(nextContests)
+        const preferredContestId = contestsJson.active_contest?.contest_id ?? nextContests[0]?.contest_id ?? null
+        if (preferredContestId && !selectedContestId) {
+          setSelectedContestId(preferredContestId)
+        }
+      }
       if (entriesRes.ok) setEntries(entriesJson.entries || [])
 
       if (!worksRes.ok || !contestsRes.ok || !entriesRes.ok) {
@@ -74,7 +81,7 @@ export default function ApplicantContestPanel() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [selectedContestId])
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {

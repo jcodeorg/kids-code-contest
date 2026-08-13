@@ -52,17 +52,17 @@ type ContestEntryRow = {
 async function resolveCurrentContest() {
   const { data, error } = await supabaseAdmin
     .from('contests')
-    .select('contest_id,title,year,status')
-    .order('created_at', { ascending: false })
+    .select('contest_id,title,year,status,is_active')
+    .order('year', { ascending: false })
     .order('contest_id', { ascending: false })
 
   if (error) throw error
 
-  const contests = (data || []) as ContestRow[]
+  const contests = (data || []) as Array<ContestRow & { is_active?: boolean | null }>
   if (!contests.length) return null
 
-  const active = contests.find((contest) => ['accepting', 'primary_judging', 'final_judging', 'draft'].includes(contest.status))
-  return active || contests[0]
+  const active = contests.find((contest) => contest.is_active === true) || contests.find((contest) => ['accepting', 'primary_judging', 'final_judging', 'draft'].includes(contest.status)) || contests[0]
+  return active || null
 }
 
 export async function POST(req: Request) {

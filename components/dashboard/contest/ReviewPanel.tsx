@@ -44,9 +44,10 @@ export default function ReviewPanel({ phase, roleLabel }: { phase: Phase; roleLa
     const res = await fetch('/api/contests')
     const d = await res.json()
     if (res.ok) {
-      setContests(d.contests || [])
-      const first = (d.contests || [])[0]
-      if (first?.contest_id) setContestId(first.contest_id)
+      const nextContests = d.contests || []
+      setContests(nextContests)
+      const preferred = d.active_contest?.contest_id ?? nextContests[0]?.contest_id
+      if (preferred) setContestId(preferred)
     }
   }
 
