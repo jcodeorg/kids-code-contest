@@ -93,26 +93,26 @@ export const NAV_ITEMS: Record<Role, NavItem[]> = {
   applicant: [],
 
   staff: [
-    { label: '私の審査', href: '/staff/reviews' },
+    { label: '私の審査', href: '/staff' },
     { label: '応募作品一覧', href: '/staff/submissions' },
     { label: '一次集計', href: '/staff/aggregate' },
   ],
 
   judge: [
-    { label: '私の審査', href: '/judge/reviews' },
+    { label: '私の審査', href: '/judge' },
     { label: '上位作品一覧', href: '/judge/top_submissions' },
     { label: '二次集計', href: '/judge/aggregate' },
   ],
 
   contest_admin: [
+    { label: 'コンテスト管理', href: '/contest_admin' },
     { label: '一次集計', href: '/contest_admin/aggregate_1' },
     { label: '二次集計', href: '/contest_admin/aggregate_2' },
-    { label: 'コンテスト管理', href: '/contest_admin/settings' },
-  ],
+   ],
 
   admin: [
     { label: 'システム管理', href: '/admin/system' },
-    { label: 'ユーザー管理', href: '/admin/users' },
+    { label: 'ユーザー管理', href: '/admin' },
   ],
 };
 
