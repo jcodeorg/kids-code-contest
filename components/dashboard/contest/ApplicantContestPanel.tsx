@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase/client'
 
 type Work = {
@@ -83,7 +83,7 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
     } finally {
       setLoading(false)
     }
-  }, [onSelectedContestIdChange, selectedContestId])
+  }, [contests, onSelectedContestIdChange, selectedContestId])
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -91,8 +91,6 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
     }, 0)
     return () => window.clearTimeout(timerId)
   }, [loadAll])
-
-  const openContests = useMemo(() => contests.filter((c) => c.status === 'accepting' || c.status === 'draft'), [contests])
 
   async function submitEntry(targetWorkId?: string, mode: 'create' | 'replace' = 'create') {
     const effectiveWorkId = targetWorkId || selectedWorkId
@@ -141,8 +139,12 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
             <Link className="btn btn-primary" href="/applicant/works/new">作品を追加</Link>
           </div>
 
-          <div className="rounded-box bg-base-200 p-3 text-sm">
+          <div className="rounded-box bg-base-200 p-3 text-sm flex flex-wrap items-center justify-between gap-3">
             <span>対象コンテスト: <strong>{selectedContestName}</strong></span>
+            {selectedContestId ? (() => {
+              const currentEntry = entries.find((entry) => entry.contest_id === selectedContestId)
+              return currentEntry?.work_id ? <span>応募中の作品: <strong>work_id={currentEntry.work_id}</strong></span> : <span>応募中の作品: <strong>未設定</strong></span>
+            })() : <span>応募中の作品: <strong>未選択</strong></span>}
           </div>
 
           <div className="overflow-x-auto">
@@ -150,8 +152,11 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
               <thead><tr><th>タイトル</th><th>カテゴリ</th><th>説明</th><th>URL</th><th>応募状況</th><th>操作</th></tr></thead>
               <tbody>
                 {works.map((w) => {
-                  const matchingEntry = entries.find((entry) => entry.contest_id === selectedContestId && entry.work_id === w.work_id)
-                  const statusLabel = matchingEntry ? `応募済み (#${matchingEntry.work_number})` : '未応募'
+                  const selectedContestEntry = selectedContestId ? entries.find((entry) => entry.contest_id === selectedContestId) : undefined
+                  const isCurrentEntry = !!selectedContestEntry && !!selectedContestEntry.work_id && selectedContestEntry.work_id === w.work_id
+                  const statusLabel = isCurrentEntry
+                    ? `応募済み (work_id=${selectedContestEntry.work_id})`
+                    : (selectedContestEntry?.work_id ? `別作品を応募済み (work_id=${selectedContestEntry.work_id})` : '未応募')
 
                   return (
                     <tr key={w.work_id}>
@@ -164,9 +169,9 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
                         <button
                           className="btn btn-sm btn-primary"
                           type="button"
-                          onClick={() => void submitEntry(w.work_id, matchingEntry ? 'replace' : 'create')}
+                          onClick={() => void submitEntry(w.work_id, isCurrentEntry ? 'replace' : (selectedContestEntry ? 'replace' : 'create'))}
                         >
-                          {matchingEntry ? '応募作品を変更' : '応募する'}
+                          {isCurrentEntry ? 'この作品で応募中' : (selectedContestEntry ? '応募作品を変更' : '応募する')}
                         </button>
                         <Link className="btn btn-sm btn-outline" href={`/applicant/works/${w.work_id}`}>編集</Link>
                       </td>

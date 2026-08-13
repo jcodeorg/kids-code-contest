@@ -68,7 +68,7 @@ async function resolveCurrentContest() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { name, nameKana, email, guardianEmail, inviteToken, authProvider } = body || {}
+    const { name, nameKana, email, guardianEmail, inviteToken, authProvider, contest_id: contestIdFromBody } = body || {}
     if (!email) {
       return NextResponse.json({ error: 'email is required' }, { status: 400 })
     }
@@ -241,9 +241,18 @@ export async function POST(req: Request) {
     let contestEntryToken = ''
 
     if (safeGuardianEmail) {
-      const contest = await resolveCurrentContest()
+      const requestedContestId = Number(contestIdFromBody)
+      const contest = Number.isFinite(requestedContestId) && requestedContestId > 0
+        ? (await supabaseAdmin
+            .from('contests')
+            .select('contest_id,title,year,status,is_active')
+            .eq('contest_id', requestedContestId)
+            .limit(1)
+            .maybeSingle())?.data
+        : await resolveCurrentContest()
+
       if (!contest) {
-        return NextResponse.json({ error: 'active contest not found' }, { status: 400 })
+        return NextResponse.json({ error: 'contest not found' }, { status: 400 })
       }
 
       const { data: existingEntry, error: existingEntryErr } = await supabaseAdmin

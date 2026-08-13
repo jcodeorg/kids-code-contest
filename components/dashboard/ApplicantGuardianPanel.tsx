@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase/client'
 
 type ApplicantProfile = {
@@ -13,6 +13,7 @@ type ApplicantProfile = {
 type ContestEntry = {
   entry_id: number
   contest_id: number
+  work_id: string | null
   guardian_email: string | null
   guardian_consent: string | null
   guardian_consent_at: string | null
@@ -24,7 +25,7 @@ type ContestEntry = {
   contests?: { title?: string; year?: number; status?: string }
 }
 
-export default function ApplicantGuardianPanel() {
+export default function ApplicantGuardianPanel({ selectedContestId }: { selectedContestId: number | null }) {
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<ApplicantProfile | null>(null)
   const [entry, setEntry] = useState<ContestEntry | null>(null)
@@ -36,7 +37,7 @@ export default function ApplicantGuardianPanel() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   }
 
-  async function fetchState() {
+  const fetchState = useCallback(async () => {
     setLoading(true)
     try {
       const userRes = await supabase.auth.getUser()
@@ -56,10 +57,17 @@ export default function ApplicantGuardianPanel() {
       const safeProfile = profileData as ApplicantProfile | null
       setProfile(safeProfile)
 
+      if (!selectedContestId) {
+        setEntry(null)
+        setGuardianEmail('')
+        return
+      }
+
       const { data: entryData } = await supabase
         .from('contest_entries')
-        .select('entry_id,contest_id,guardian_email,guardian_consent,guardian_consent_at,school_name,grade,guardian_name,guardian_phone,status,contests(title,year,status)')
+        .select('entry_id,contest_id,work_id,guardian_email,guardian_consent,guardian_consent_at,school_name,grade,guardian_name,guardian_phone,status,contests(title,year,status)')
         .eq('user_id', user.id)
+        .eq('contest_id', selectedContestId)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -72,14 +80,14 @@ export default function ApplicantGuardianPanel() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedContestId])
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
       void fetchState()
     }, 0)
     return () => window.clearTimeout(timerId)
-  }, [])
+  }, [fetchState])
 
   async function sendConsentRequest(e: React.FormEvent) {
     e.preventDefault()
@@ -108,6 +116,7 @@ export default function ApplicantGuardianPanel() {
           nameKana: profile.name_kana,
           email: profile.email,
           guardianEmail,
+          contest_id: selectedContestId,
         }),
       })
       const d = await res.json()
@@ -133,6 +142,7 @@ export default function ApplicantGuardianPanel() {
   const needsInitialInput = !guardianEmail
   const consentStatus = entry?.guardian_consent || 'pending'
   const statusLabel = consentStatus === 'approved' ? '同意済み' : consentStatus === 'rejected' ? '保護者の確認待ち' : '未同意'
+  const contestLabel = entry?.contests?.title ? `[${entry.contests.year ?? '-'}] ${entry.contests.title}` : (selectedContestId ? `contest_id: ${selectedContestId}` : '対象コンテスト未選択')
 
   if (!detailOpen) {
     return (
@@ -147,6 +157,7 @@ export default function ApplicantGuardianPanel() {
               詳細を表示
             </button>
           </div>
+          <div className="text-sm text-base-content/70 mt-2">対象コンテスト: {contestLabel}</div>
         </div>
       </div>
     )
@@ -161,6 +172,10 @@ export default function ApplicantGuardianPanel() {
         </div>
 
         <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
+          <div>対象コンテスト: <strong>{contestLabel}</strong></div>
+        </div>
+
+        <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
           <div>お名前: <strong>{profile.name || '-'}</strong></div>
           <div>ふりがな: <strong>{profile.name_kana || '-'}</strong></div>
           <div>メール: <strong>{profile.email}</strong></div>
@@ -168,6 +183,8 @@ export default function ApplicantGuardianPanel() {
 
         {entry ? (
           <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
+            <div>contest_id: <strong>{entry.contest_id ?? '-'}</strong></div>
+            <div>work_id: <strong>{entry.work_id ?? '-'}</strong></div>
             <div>応募状態: <strong>{entry.status || 'draft'}</strong></div>
             <div>保護者同意: <strong>{statusLabel}</strong>{entry.guardian_consent_at ? `（${new Date(entry.guardian_consent_at).toLocaleString()}）` : ''}</div>
             <div>学校: <strong>{entry.school_name || '-'}</strong></div>

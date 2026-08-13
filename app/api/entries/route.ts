@@ -136,14 +136,13 @@ export async function POST(req: Request) {
 
     const { data: exists, error: existsErr } = await supabaseAdmin
       .from('contest_entries')
-      .select('entry_id')
+      .select('entry_id,work_id,work_number,guardian_consent,status')
       .eq('contest_id', contestId)
       .eq('user_id', auth.identity.userId)
       .limit(1)
       .maybeSingle()
 
     if (existsErr) return NextResponse.json({ error: existsErr.message }, { status: 500 })
-    if (exists) return NextResponse.json({ error: 'already entered this contest' }, { status: 409 })
 
     const { data: profile, error: profileErr } = await supabaseAdmin
       .from('contest_entries')
@@ -156,6 +155,22 @@ export async function POST(req: Request) {
     if (profileErr) return NextResponse.json({ error: profileErr.message }, { status: 500 })
     if (profile?.guardian_consent !== 'approved') {
       return NextResponse.json({ error: 'guardian consent is required before entry' }, { status: 400 })
+    }
+
+    if (exists) {
+      const { data: updated, error: updateErr } = await supabaseAdmin
+        .from('contest_entries')
+        .update({
+          work_id: workId,
+          entry_type: entryType,
+          status: 'submitted',
+        })
+        .eq('entry_id', exists.entry_id)
+        .select()
+        .single()
+
+      if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
+      return NextResponse.json({ entry: updated, replaced: true })
     }
 
     const { data: maxRow, error: maxErr } = await supabaseAdmin
@@ -185,7 +200,7 @@ export async function POST(req: Request) {
       .single()
 
     if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 })
-    return NextResponse.json({ entry: inserted })
+    return NextResponse.json({ entry: inserted, replaced: false })
   } catch (err: unknown) {
     return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }
