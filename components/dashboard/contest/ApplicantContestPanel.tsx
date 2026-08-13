@@ -23,6 +23,7 @@ type ApplicantContestPanelProps = {
   contests: Contest[]
   selectedContestId: number | null
   onSelectedContestIdChange: (nextContestId: number | null) => void
+  onEntryChanged?: () => void
 }
 
 type Entry = {
@@ -35,7 +36,7 @@ type Entry = {
   works?: { title?: string }
 }
 
-export default function ApplicantContestPanel({ contests, selectedContestId, onSelectedContestIdChange }: ApplicantContestPanelProps) {
+export default function ApplicantContestPanel({ contests, selectedContestId, onSelectedContestIdChange, onEntryChanged }: ApplicantContestPanelProps) {
   const [works, setWorks] = useState<Work[]>([])
   const [entries, setEntries] = useState<Entry[]>([])
   const [status, setStatus] = useState('')
@@ -123,6 +124,7 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
       setSelectedWorkId(effectiveWorkId)
       setStatus(isReplace ? `応募作品を変更しました: 作品番号 #${data.entry?.work_number ?? '-'}` : `応募完了: 作品番号 #${data.entry?.work_number ?? '-'}`)
       await loadAll()
+      onEntryChanged?.()
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : '処理に失敗しました')
     }
@@ -159,6 +161,7 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
       setSelectedWorkId('')
       setStatus(`応募を取り消しました: 作品番号は解除されました`)
       await loadAll()
+      onEntryChanged?.()
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : '処理に失敗しました')
     }
@@ -171,43 +174,34 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
       <section className="card bg-base-100 shadow-md border border-base-200">
         <div className="card-body gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="card-title">作品一覧</h3>
-            <Link className="btn btn-primary" href="/applicant/works/new">作品をついか</Link>
-          </div>
-
-          <div className="rounded-box bg-base-200 p-3 text-sm flex flex-wrap items-center justify-between gap-3">
-            <span>選ぶコンテスト: <strong>{selectedContestName}</strong></span>
-            {selectedContestId ? (() => {
-              const currentEntry = entries.find((entry) => entry.contest_id === selectedContestId)
-              return currentEntry?.work_id ? <span>応募中: <strong>#{currentEntry.work_number ?? '-'}</strong></span> : <span>応募中: <strong>まだなし</strong></span>
-            })() : <span>応募中: <strong>まだ選んでない</strong></span>}
+            <h3 className="card-title">さくひん いちらん</h3>
+            <Link className="btn btn-primary" href="/applicant/works/new">さくひんを ついか</Link>
           </div>
 
           <div className="overflow-x-auto">
             <table className="table table-zebra">
-              <thead><tr><th>作品名</th><th>種類</th><th>せつめい</th><th>URL</th><th>状態</th><th>ボタン</th></tr></thead>
+              <thead><tr><th>さくひん名</th><th>しゅるい</th><th>ステータス</th><th>ボタン</th></tr></thead>
               <tbody>
                 {works.map((w) => {
                   const selectedContestEntry = selectedContestId ? entries.find((entry) => entry.contest_id === selectedContestId) : undefined
                   const isCurrentEntry = !!selectedContestEntry && !!selectedContestEntry.work_id && selectedContestEntry.work_id === w.work_id
                   const statusLabel = isCurrentEntry
                     ? `応募した (#${selectedContestEntry.work_number ?? '-'})`
-                    : (selectedContestEntry?.work_id ? `ほかの作品を応募中 (#${selectedContestEntry.work_number ?? '-'})` : 'まだ応募していない')
+                    : (selectedContestEntry?.work_id ? ` - ` : 'まだ応募していない')
 
                   return (
                     <tr key={w.work_id}>
                       <td>
-                        {w.title}
-                        {isCurrentEntry && Number.isFinite(selectedContestEntry?.work_number) ? ` - [#${selectedContestEntry.work_number}]` : ''}
+                        {isCurrentEntry && Number.isFinite(selectedContestEntry?.work_number)
+                          ? `[#${selectedContestEntry.work_number}]${w.title}`
+                          : w.title}
                       </td>
                       <td>{w.category}</td>
-                      <td>{w.short_description}</td>
-                      <td className="max-w-xs truncate">{w.work_url}</td>
                       <td>{statusLabel}</td>
                       <td className="flex flex-wrap gap-2">
                         {isCurrentEntry ? (
                           <button className="btn btn-sm btn-warning" type="button" onClick={() => void cancelEntry()}>
-                            応募をやめる
+                            おうぼを やめる
                           </button>
                         ) : (
                           <button
@@ -215,10 +209,10 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
                             type="button"
                             onClick={() => void submitEntry(w.work_id, selectedContestEntry ? 'replace' : 'create')}
                           >
-                            これを応募する
+                            これを おうぼ
                           </button>
                         )}
-                        <Link className="btn btn-sm btn-outline" href={`/applicant/works/${w.work_id}`}>編集</Link>
+                        <Link className="btn btn-sm btn-outline" href={`/applicant/works/${w.work_id}`}>へんしゅう</Link>
                       </td>
                     </tr>
                   )

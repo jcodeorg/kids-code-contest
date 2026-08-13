@@ -337,13 +337,15 @@ export async function POST(req: Request) {
         await resend.emails.send({
           from: fromAddress,
           to: safeGuardianEmail,
-          subject: '【要同意】保護者同意のお願い - キッズプログラミングコンテスト',
+          subject: '【要保護者同意】北区こどもプログラミングコンテスト',
           html: `
             <p>保護者様</p>
             <p>${safeName} さんの登録がありました。下のリンクを押して保護者同意をお願いします。</p>
             <p><a href="${consentUrl}">同意・確認ページへ</a></p>
             <p>このメールに心当たりがない場合は無視してください。</p>
-          `,
+            <p>NPO法人プログラミング教育研究所</p>
+            <p>※このメールは送信専用です。返信はできません。</p>
+            `,
         })
       } catch (sendErr) {
         console.error('[Resend API Error]:', sendErr)

@@ -13,6 +13,7 @@ type ContestEntry = {
   entry_id: number
   contest_id: number
   work_id: string | null
+  work_number: number | null
   name: string | null
   name_kana: string | null
   guardian_email: string | null
@@ -24,15 +25,17 @@ type ContestEntry = {
   guardian_phone: string | null
   status: string | null
   contests?: { title?: string; year?: number; status?: string }
+  works?: { title?: string }
 }
 
-export default function ApplicantGuardianPanel({ selectedContestId }: { selectedContestId: number | null }) {
+export default function ApplicantGuardianPanel({ selectedContestId, refreshKey }: { selectedContestId: number | null; refreshKey?: number }) {
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<ApplicantProfile | null>(null)
   const [entry, setEntry] = useState<ContestEntry | null>(null)
+  const [nickname, setNickname] = useState('')
   const [guardianEmail, setGuardianEmail] = useState('')
   const [status, setStatus] = useState('')
-  const [detailOpen, setDetailOpen] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(true)
 
   function isValidEmail(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -57,6 +60,7 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
 
       const safeProfile = profileData as ApplicantProfile | null
       setProfile(safeProfile)
+      setNickname(safeProfile?.name || '')
 
       if (!selectedContestId) {
         setEntry(null)
@@ -66,7 +70,7 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
 
       const { data: entryData } = await supabase
         .from('contest_entries')
-        .select('entry_id,contest_id,work_id,name,name_kana,guardian_email,guardian_consent,guardian_consent_at,school_name,grade,guardian_name,guardian_phone,status,contests(title,year,status)')
+        .select('entry_id,contest_id,work_id,work_number,name,name_kana,guardian_email,guardian_consent,guardian_consent_at,school_name,grade,guardian_name,guardian_phone,status,contests(title,year,status),works(title)')
         .eq('user_id', user.id)
         .eq('contest_id', selectedContestId)
         .order('created_at', { ascending: false })
@@ -74,8 +78,10 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
         .maybeSingle()
 
       const safeEntry = entryData as ContestEntry | null
+      const nextGuardianEmail = safeEntry?.guardian_email || ''
       setEntry(safeEntry)
-      setGuardianEmail(safeEntry?.guardian_email || '')
+      setGuardianEmail(nextGuardianEmail)
+      setDetailOpen(!nextGuardianEmail)
     } catch {
       // ignore
     } finally {
@@ -88,7 +94,7 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
       void fetchState()
     }, 0)
     return () => window.clearTimeout(timerId)
-  }, [fetchState])
+  }, [fetchState, refreshKey])
 
   async function sendConsentRequest(e: React.FormEvent) {
     e.preventDefault()
@@ -101,7 +107,7 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
       setStatus('メールアドレスの書き方を確認してください')
       return
     }
-    const ok = typeof window !== 'undefined' ? window.confirm('おうちの人に同意メールを送ります。よいですか？') : true
+    const ok = typeof window !== 'undefined' ? window.confirm('おうちの人にメールを おくります。OKを おしてください。') : true
     if (!ok) {
       setStatus('送信を中止しました')
       return
@@ -109,11 +115,12 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
 
     setStatus('送信中...')
     try {
+      const safeNickname = nickname.trim() || profile.name || ''
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: profile.name,
+          name: safeNickname,
           nameKana: entry?.name_kana || '',
           email: profile.email,
           guardianEmail,
@@ -133,18 +140,16 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
     }
   }
 
-  async function resend() {
-    await sendConsentRequest({ preventDefault: () => undefined } as React.FormEvent)
-  }
+  const needsInitialInput = !guardianEmail
 
   if (loading) return <div className="alert alert-info mb-4">読み込み中...</div>
   if (!profile) return <div className="alert alert-warning mb-4">サインインしてください。</div>
 
-  const needsInitialInput = !guardianEmail
   const consentStatus = entry?.guardian_consent || 'pending'
   const consentLabel = consentStatus === 'approved' ? 'ほごしゃ どういずみ' : consentStatus === 'rejected' ? 'ほごしゃ かくにんちゅう' : 'まだ どういしてない'
-  const entryStatusLabel = entry?.status === 'submitted' ? 'さくひん おうぼずみ' : entry?.status === 'draft' ? 'さくひん まだ' : entry?.status || 'まだ'
-  const contestLabel = entry?.contests?.title ? `[${entry.contests.year ?? '-'}] ${entry.contests.title}` : (selectedContestId ? `コンテスト: ${selectedContestId}` : 'まだ選んでない')
+  const consentBadgeClass = consentStatus === 'approved' ? 'badge-success' : consentStatus === 'rejected' ? 'badge-warning' : 'badge-warning'
+  const entryStatusLabel = entry?.status === 'submitted' ? 'さくひん おうぼずみ' : entry?.status === 'draft' ? 'まだ おうぼしてない' : entry?.status || 'まだ'
+  const entryStatusBadgeClass = entry?.status === 'submitted' ? 'badge-success' : entry?.status === 'draft' ? 'badge-warning' : 'badge-outline'
 
   if (!detailOpen) {
     return (
@@ -154,15 +159,14 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
             <div className="flex items-center gap-3">
               <h3 className="card-title text-lg">おうぼステータス</h3>
               <div className="flex items-center gap-2">
-                <span className="badge badge-outline">{consentLabel}</span>
-                <span className="badge badge-outline">{entryStatusLabel}</span>
+                <span className={`badge ${consentBadgeClass}`}>{consentLabel}</span>
+                <span className={`badge ${entryStatusBadgeClass}`}>{entryStatusLabel}</span>
               </div>
             </div>
             <button className="btn btn-sm btn-primary" type="button" onClick={() => setDetailOpen(true)}>
               もっとみる
             </button>
           </div>
-          <div className="text-sm text-base-content/70 mt-2">コンテスト: {contestLabel}</div>
         </div>
       </div>
     )
@@ -177,20 +181,16 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
         </div>
 
         <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
-          <div>コンテスト: <strong>{contestLabel}</strong></div>
-        </div>
-
-        <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
           <div>ニックネーム: <strong>{profile.name || '-'}</strong></div>
-          <div>正式な名前: <strong>{entry?.name || '-'}</strong></div>
-          <div>かな: <strong>{entry?.name_kana || '-'}</strong></div>
           <div>メール: <strong>{profile.email}</strong></div>
         </div>
 
         {entry ? (
           <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
-            <div>こんてすと: <strong>{entry.contest_id ?? '-'}</strong></div>
-            <div>さくひん: <strong>{entry.work_id ?? '-'}</strong></div>
+            <div>正式な名前: <strong>{entry?.name || '-'}</strong></div>
+            <div>かな: <strong>{entry?.name_kana || '-'}</strong></div>
+            <div>こんてすと: <strong>{entry.contests?.title || '-'}</strong></div>
+            <div>さくひん: <strong>{entry.work_number ? `[ #${entry.work_number} ]${entry.works?.title || '-'}` : (entry.works?.title ? entry.works.title : '-')}</strong></div>
             <div>おうぼのじょうたい: <strong>{entryStatusLabel}</strong></div>
             <div>ほごしゃ どうい: <strong>{consentLabel}</strong>{entry.guardian_consent_at ? `（${new Date(entry.guardian_consent_at).toLocaleString()}）` : ''}</div>
             <div>がっこう: <strong>{entry.school_name || '-'}</strong></div>
@@ -201,12 +201,17 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
         ) : null}
 
         {needsInitialInput ? (
-          <div className="alert alert-warning text-sm">まず、ほごしゃのメールアドレスを入れて、どういメールをおくってください。</div>
+          <div className="alert alert-warning text-sm">おうちの人の メール アドレス を入れて、メールを おくってください。</div>
         ) : null}
 
         <form onSubmit={sendConsentRequest} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full md:col-span-2">
-            <div className="label"><span className="label-text">ほごしゃのメールアドレス</span></div>
+            <div className="label"><span className="label-text">あなたのニックネーム</span></div>
+            <input className="input input-bordered w-full" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="あおい" />
+          </label>
+
+          <label className="form-control w-full md:col-span-2">
+            <div className="label"><span className="label-text">おうちの人のメールアドレス</span></div>
             <input className="input input-bordered w-full" type="email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} placeholder="おうちの人のメールアドレス" required />
             {guardianEmail && !isValidEmail(guardianEmail) ? (
               <div className="text-xs text-error mt-1">メールアドレスのかたちを かくにんしてください（例: guardian@example.com）</div>
@@ -214,9 +219,7 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
           </label>
 
           <div className="md:col-span-2 flex flex-wrap gap-3">
-            <button className="btn btn-primary" type="submit">どういメールを送る</button>
-            {!needsInitialInput ? <button className="btn btn-ghost" type="button" onClick={resend}>もういちどおくる</button> : null}
-            <button className="btn btn-ghost" type="button" onClick={fetchState}>更新</button>
+            <button className="btn btn-primary" type="submit">{needsInitialInput ? 'メールをおくる' : 'メールをもういちど おくる'}</button>
           </div>
         </form>
 

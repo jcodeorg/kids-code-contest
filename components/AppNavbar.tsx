@@ -80,7 +80,6 @@ export default function AppNavbar() {
     const timer = setTimeout(() => {
       if (mounted) {
         void loadHeaderState()
-        void loadActiveContestName()
       }
     }, 0)
 

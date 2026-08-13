@@ -16,14 +16,19 @@ export type WorkFormValues = {
   video_file_url?: string
 }
 
-const CATEGORY_OPTIONS = ['scratch', 'microbit', 'web_app', 'python', 'other']
+const CATEGORY_OPTIONS = [
+  { value: 'scratch', label: 'スクラッチ' },
+  { value: 'microbit', label: 'マイクロビット' },
+  { value: 'python', label: 'Python' },
+  { value: 'other', label: 'その他' },
+] as const
 
 type SubmitResult = { ok: true } | { ok: false; error?: string }
 
 export default function WorkForm({
   initialValues,
-  titleText = '作品',
-  submitLabel = '保存する',
+  titleText = 'コンテスト応募フォーム',
+  submitLabel = 'ほぞん する',
   onSubmit,
   onCancel,
   onSuccess,
@@ -231,47 +236,47 @@ export default function WorkForm({
         <h2 className="text-xl font-semibold">{titleText}</h2>
       </div>
 
-      <form className="grid grid-cols-1 md:grid-cols-2 gap-3" onSubmit={handleSubmit}>
+      <form className="grid grid-cols-1 gap-3" onSubmit={handleSubmit}>
         <div>
-          <label htmlFor="title-input" className="block text-sm font-medium mb-1">作品タイトル</label>
-          <input id="title-input" className="input input-bordered" placeholder="作品タイトル" value={title} onChange={(e) => setTitle(e.target.value)} required />
-        </div>
-
-        <div>
-          <label htmlFor="category-select" className="block text-sm font-medium mb-1">カテゴリ</label>
-          <select id="category-select" className="select select-bordered" value={category} onChange={(e) => setCategory(e.target.value)}>
-            {CATEGORY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+          <label htmlFor="category-select" className="block text-sm font-medium mb-1">カテゴリー</label>
+          <select id="category-select" className="select select-bordered w-full" value={category} onChange={(e) => setCategory(e.target.value)}>
+            {CATEGORY_OPTIONS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
           </select>
         </div>
 
-        <div className="md:col-span-2">
-          <label htmlFor="short-desc" className="block text-sm font-medium mb-1">短い説明</label>
-          <input id="short-desc" className="input input-bordered w-full" placeholder="短い説明" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} required />
+        <div>
+          <label htmlFor="title-input" className="block text-sm font-medium mb-1">さくひんの なまえ</label>
+          <input id="title-input" className="input input-bordered w-full" placeholder="さくひんの なまえ" value={title} onChange={(e) => setTitle(e.target.value)} required />
         </div>
 
-        <div className="md:col-span-2">
-          <label htmlFor="detailed-desc" className="block text-sm font-medium mb-1">詳細説明</label>
-          <textarea id="detailed-desc" className="textarea textarea-bordered w-full" placeholder="詳細説明" value={detailedDescription} onChange={(e) => setDetailedDescription(e.target.value)} required />
+        <div>
+          <label htmlFor="short-desc" className="block text-sm font-medium mb-1">みじかい せつめい</label>
+          <input id="short-desc" className="input input-bordered w-full" placeholder="みじかい せつめい" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} required />
+        </div>
+
+        <div>
+          <label htmlFor="detailed-desc" className="block text-sm font-medium mb-1">ながい せつめい</label>
+          <textarea id="detailed-desc" className="textarea textarea-bordered w-full" placeholder="ながい せつめい" value={detailedDescription} onChange={(e) => setDetailedDescription(e.target.value)} required />
         </div>
 
         <div>
           <label htmlFor="work-url" className="block text-sm font-medium mb-1">作品URL</label>
-          <input id="work-url" className="input input-bordered" placeholder="作品URL" value={workUrl} onChange={(e) => setWorkUrl(e.target.value)} required />
+          <input id="work-url" className="input input-bordered w-full" placeholder="作品URL" value={workUrl} onChange={(e) => setWorkUrl(e.target.value)} required />
         </div>
 
         <div>
           <label htmlFor="video-type" className="block text-sm font-medium mb-1">動画タイプ</label>
-          <select id="video-type" className="select select-bordered" value={videoType} onChange={(e) => setVideoType(e.target.value)}>
+          <select id="video-type" className="select select-bordered w-full" value={videoType} onChange={(e) => setVideoType(e.target.value)}>
             <option value="youtube_url">YouTube URL</option>
             <option value="mp4_file">MP4 ファイル</option>
           </select>
         </div>
 
-        <div className="md:col-span-2">
+        <div>
           <label htmlFor="video-location" className="block text-sm font-medium mb-1">動画URL / 保存先</label>
           <input id="video-location" className="input input-bordered w-full" placeholder="動画URL / 保存先" value={videoLocation} onChange={(e) => setVideoLocation(e.target.value)} />
         </div>
-        <div className="md:col-span-2">
+        <div>
           <label htmlFor="thumbnail-file" className="block text-sm font-medium mb-1">サムネイル画像</label>
           <input id="thumbnail-file" type="file" accept="image/*" onChange={handleThumbnailChange} />
           {uploadingThumbnail ? <div className="text-sm text-gray-500">アップロード中...</div> : null}
@@ -284,7 +289,7 @@ export default function WorkForm({
             </div>
           ) : null}
         </div>
-        <div className="md:col-span-2">
+        <div>
           <label htmlFor="video-file" className="block text-sm font-medium mb-1">動画ファイル (mp4)</label>
           <input id="video-file" type="file" accept="video/*" onChange={handleVideoFileChange} />
           {uploadingVideo ? <div className="text-sm text-gray-500">アップロード中...</div> : null}
@@ -297,7 +302,7 @@ export default function WorkForm({
             </div>
           ) : null}
         </div>
-        <div className="md:col-span-2 flex gap-2">
+        <div className="flex gap-2">
           <button className="btn btn-primary" disabled={saving} type="submit">{saving ? '保存中...' : submitLabel}</button>
           <button type="button" className="btn btn-ghost" onClick={() => onCancel?.()}>{onCancel ? 'キャンセル' : '戻る'}</button>
         </div>

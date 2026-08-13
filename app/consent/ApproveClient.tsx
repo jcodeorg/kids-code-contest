@@ -73,17 +73,14 @@ export default function ApproveClient({ token, initialStatus, initialData }: { t
 
   return (
     <div className="space-y-3">
-      <p className="text-sm">現在のステータス: <strong>{status || 'pending'}</strong></p>
 
       <div className="rounded-box bg-base-200 p-4 text-sm">
-        <p>お子さん: <strong>{name || '-'}</strong></p>
-        <p>ふりがな: <strong>{nameKana || '-'}</strong></p>
-        <p>メール: <strong>{initialData?.email || '-'}</strong></p>
+        <p><strong>上記の個人情報の取り扱いに同意します。</strong></p>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
         <label className="form-control">
-          <div className="label"><span className="label-text">お子さんのお名前</span></div>
+          <div className="label"><span className="label-text">お子様の名前</span></div>
           <input className="input input-bordered" value={name} onChange={(e) => setName(e.target.value)} />
         </label>
 
@@ -93,7 +90,7 @@ export default function ApproveClient({ token, initialStatus, initialData }: { t
         </label>
 
         <label className="form-control">
-          <div className="label"><span className="label-text">学校</span></div>
+          <div className="label"><span className="label-text">学校名</span></div>
           <input className="input input-bordered" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} />
         </label>
 
@@ -114,7 +111,7 @@ export default function ApproveClient({ token, initialStatus, initialData }: { t
         </label>
 
         <label className="form-control">
-          <div className="label"><span className="label-text">保護者氏名（受信する方）</span></div>
+          <div className="label"><span className="label-text">保護者氏名</span></div>
           <input className="input input-bordered" value={guardianName} onChange={(e) => setGuardianName(e.target.value)} required />
         </label>
 
@@ -124,13 +121,13 @@ export default function ApproveClient({ token, initialStatus, initialData }: { t
         </label>
 
         <label className="form-control">
-          <div className="label"><span className="label-text">保護者メール（任意）</span></div>
+          <div className="label"><span className="label-text">保護者メール</span></div>
           <input className="input input-bordered" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} />
         </label>
       </div>
 
       <button className="btn btn-primary" onClick={approve} disabled={loading}>
-        {status === 'approved' ? '同意を更新して送信' : '同意して送信する'}
+        {status === 'approved' ? '同意して送信する' : '同意して送信する'}
       </button>
 
       {message ? <div className="alert alert-info text-sm">{message}</div> : null}

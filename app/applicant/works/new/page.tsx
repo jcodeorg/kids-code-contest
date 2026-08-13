@@ -48,12 +48,12 @@ export default function NewWorkPage() {
       <div className="max-w-3xl mx-auto card bg-base-100 border border-base-200 shadow-md">
         <div className="card-body gap-4">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="card-title text-2xl">作品を追加</h1>
-            <Link className="btn btn-ghost" href="/applicant">戻る</Link>
+            <h1 className="card-title text-2xl">さくひんを ついか</h1>
+            <Link className="btn btn-ghost" href="/applicant">もどる</Link>
           </div>
 
           <WorkForm
-            submitLabel="保存する"
+            submitLabel="ほぞん する"
             onSubmit={handleSubmit}
             onSuccess={() => router.push('/applicant')}
             onCancel={() => router.push('/applicant')}

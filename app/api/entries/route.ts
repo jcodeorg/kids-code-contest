@@ -161,19 +161,6 @@ export async function POST(req: Request) {
 
     if (existsErr) return NextResponse.json({ error: existsErr.message }, { status: 500 })
 
-    const { data: profile, error: profileErr } = await supabaseAdmin
-      .from('contest_entries')
-      .select('guardian_consent')
-      .eq('user_id', auth.identity.userId)
-      .eq('contest_id', contestId)
-      .limit(1)
-      .maybeSingle()
-
-    if (profileErr) return NextResponse.json({ error: profileErr.message }, { status: 500 })
-    if (profile?.guardian_consent !== 'approved') {
-      return NextResponse.json({ error: 'guardian consent is required before entry' }, { status: 400 })
-    }
-
     if (exists) {
       const nextNumber = exists.work_number ?? (await nextContestWorkNumber(contestId))
       const { data: updated, error: updateErr } = await supabaseAdmin

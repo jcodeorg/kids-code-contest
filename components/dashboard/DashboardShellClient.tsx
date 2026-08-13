@@ -17,6 +17,7 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
   const role = rootRole || paramsRole || 'applicant'
   const [allContests, setAllContests] = useState<Array<{ contest_id: number; title: string; year: number; status: string }>>([])
   const [selectedApplicantContestId, setSelectedApplicantContestId] = useState<number | null>(null)
+  const [applicantEntryRefreshKey, setApplicantEntryRefreshKey] = useState(0)
 
   useEffect(() => {
     async function loadContestState() {
@@ -52,11 +53,12 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
   const selectedContestName = allContests.find((contest) => contest.contest_id === selectedApplicantContestId)?.title || 'コンテスト未選択'
   const title = allContests.length > 0 ? selectedContestName : (titleMap[role] || `${role} ダッシュボード`)
 
+  const handleApplicantEntryChanged = () => setApplicantEntryRefreshKey((current) => current + 1)
+
   const roleSections: Record<string, { title: string; content: React.ReactNode }[]> = {
     applicant: [
-      { title: '応募者情報と保護者同意', content: <ApplicantGuardianPanel selectedContestId={selectedApplicantContestId} /> },
-      { title: '作品ライブラリと応募', content: <ApplicantContestPanel contests={allContests} selectedContestId={selectedApplicantContestId} onSelectedContestIdChange={setSelectedApplicantContestId} /> },
-      { title: '提出状況', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><p>応募開始前・審査中・結果待ちの管理状況をここに表示します。</p></div></div> },
+      { title: '応募者情報と保護者同意', content: <ApplicantGuardianPanel selectedContestId={selectedApplicantContestId} refreshKey={applicantEntryRefreshKey} /> },
+      { title: '作品ライブラリと応募', content: <ApplicantContestPanel contests={allContests} selectedContestId={selectedApplicantContestId} onSelectedContestIdChange={setSelectedApplicantContestId} onEntryChanged={handleApplicantEntryChanged} /> },
     ],
     staff: [
       { title: '私の審査', content: <ReviewPanel phase="primary" roleLabel="私の審査" /> },

@@ -107,8 +107,8 @@ export default function EditWorkPage() {
       <div className="max-w-3xl mx-auto card bg-base-100 border border-base-200 shadow-md">
         <div className="card-body gap-4">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="card-title text-2xl">作品を編集</h1>
-            <Link className="btn btn-ghost" href="/applicant">戻る</Link>
+            <h1 className="card-title text-2xl">さくひんを へんしゅう</h1>
+            <Link className="btn btn-ghost" href="/applicant">もどる</Link>
           </div>
 
           {loading ? (
@@ -116,7 +116,7 @@ export default function EditWorkPage() {
           ) : (
             <WorkForm
               initialValues={initialValues}
-              submitLabel="更新する"
+              submitLabel="ほぞん する"
               onSubmit={handleSubmit}
               onSuccess={() => router.push('/applicant')}
               onCancel={() => router.push('/applicant')}
