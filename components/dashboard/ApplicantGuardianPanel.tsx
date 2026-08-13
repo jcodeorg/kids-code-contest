@@ -14,6 +14,8 @@ type ContestEntry = {
   entry_id: number
   contest_id: number
   work_id: string | null
+  name: string | null
+  name_kana: string | null
   guardian_email: string | null
   guardian_consent: string | null
   guardian_consent_at: string | null
@@ -65,7 +67,7 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
 
       const { data: entryData } = await supabase
         .from('contest_entries')
-        .select('entry_id,contest_id,work_id,guardian_email,guardian_consent,guardian_consent_at,school_name,grade,guardian_name,guardian_phone,status,contests(title,year,status)')
+        .select('entry_id,contest_id,work_id,name,name_kana,guardian_email,guardian_consent,guardian_consent_at,school_name,grade,guardian_name,guardian_phone,status,contests(title,year,status)')
         .eq('user_id', user.id)
         .eq('contest_id', selectedContestId)
         .order('created_at', { ascending: false })
@@ -180,8 +182,9 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
         </div>
 
         <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
-          <div>おなまえ: <strong>{profile.name || '-'}</strong></div>
-          <div>ふりがな: <strong>{profile.name_kana || '-'}</strong></div>
+          <div>ニックネーム: <strong>{profile.name || '-'}</strong></div>
+          <div>正式な名前: <strong>{entry?.name || '-'}</strong></div>
+          <div>かな: <strong>{entry?.name_kana || profile.name_kana || '-'}</strong></div>
           <div>メール: <strong>{profile.email}</strong></div>
         </div>
 

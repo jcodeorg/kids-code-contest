@@ -43,6 +43,8 @@ type ContestEntryRow = {
   work_id: string | null
   work_number: number | null
   entry_type: string | null
+  name: string | null
+  name_kana: string | null
   team_name: string | null
   team_members: string | null
   status: string | null
@@ -279,6 +281,8 @@ export async function POST(req: Request) {
         guardian_phone: existingContestEntry?.guardian_phone || null,
         school_name: existingContestEntry?.school_name || null,
         grade: existingContestEntry?.grade || null,
+        name: existingContestEntry?.name || null,
+        name_kana: existingContestEntry?.name_kana || null,
         guardian_consent: nextConsent,
         guardian_consent_at: nextConsent === 'approved' ? (existingContestEntry?.guardian_consent_at || new Date().toISOString()) : null,
         guardian_consent_token: contestEntryToken,

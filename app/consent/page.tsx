@@ -29,7 +29,7 @@ export default async function Page({ searchParams }: Props) {
   // fetch contest entry with the token using admin client
   const { data, error } = await supabaseAdmin
     .from('contest_entries')
-    .select('entry_id, contest_id, user_id, school_name, grade, guardian_email, guardian_name, guardian_phone, guardian_consent, users(name, name_kana, email)')
+    .select('entry_id, contest_id, user_id, school_name, grade, guardian_email, guardian_name, guardian_phone, guardian_consent, name, name_kana, users(email)')
     .eq('guardian_consent_token', token)
     .limit(1)
     .single()
@@ -50,8 +50,8 @@ export default async function Page({ searchParams }: Props) {
   const userInfo = Array.isArray(data.users) ? data.users[0] : data.users
 
   const initialData = {
-    name: userInfo?.name,
-    name_kana: userInfo?.name_kana,
+    name: data.name || userInfo?.name || '',
+    name_kana: data.name_kana || userInfo?.name_kana || '',
     school_name: data.school_name,
     grade: data.grade,
     email: userInfo?.email,

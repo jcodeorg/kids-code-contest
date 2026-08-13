@@ -27,6 +27,8 @@ export async function POST(req: Request) {
       guardian_phone: guardianPhone,
       school_name: schoolName || null,
       grade: grade || null,
+      name: name || null,
+      name_kana: nameKana || null,
     }
     if (guardianEmail) updateCols.guardian_email = guardianEmail
 
@@ -39,15 +41,6 @@ export async function POST(req: Request) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    if (name || nameKana) {
-      const userUpdate: Record<string, string> = {}
-      if (name) userUpdate.name = name
-      if (nameKana) userUpdate.name_kana = nameKana
-      if (Object.keys(userUpdate).length > 0) {
-        await supabaseAdmin.from('users').update(userUpdate).eq('user_id', entry.user_id)
-      }
     }
 
     return NextResponse.json({ ok: true, contestEntry: data })

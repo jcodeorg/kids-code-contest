@@ -74,7 +74,7 @@ export async function GET(req: Request) {
     if (view === 'entries') {
       const { data: entries, error } = await supabaseAdmin
         .from('contest_entries')
-        .select('entry_id, contest_id, work_id, work_number, status, entry_type, school_name, grade, guardian_name, guardian_email, guardian_consent, guardian_consent_at, users(name, email), works(title, category)')
+        .select('entry_id, contest_id, work_id, work_number, status, entry_type, name, name_kana, school_name, grade, guardian_name, guardian_email, guardian_consent, guardian_consent_at, users(name, email), works(title, category)')
         .eq('contest_id', contestId)
         .order('work_number', { ascending: true, nullsFirst: false })
 

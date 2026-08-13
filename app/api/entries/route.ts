@@ -12,6 +12,8 @@ type ContestEntryRow = {
   user_id: string
   work_number: number
   entry_type: string
+  name: string | null
+  name_kana: string | null
   status: string
   is_primary_passed: boolean
   created_at: string
@@ -93,7 +95,7 @@ export async function GET(req: Request) {
 
     let query = supabaseAdmin
       .from('contest_entries')
-      .select('entry_id,contest_id,work_id,user_id,work_number,entry_type,status,is_primary_passed,created_at,school_name,grade,guardian_name,guardian_email,guardian_phone,guardian_consent,guardian_consent_at,works(title,category,short_description,work_url,video_location),contests(title,year,status),users(name)')
+      .select('entry_id,contest_id,work_id,user_id,work_number,entry_type,name,name_kana,status,is_primary_passed,created_at,school_name,grade,guardian_name,guardian_email,guardian_phone,guardian_consent,guardian_consent_at,works(title,category,short_description,work_url,video_location),contests(title,year,status),users(name)')
       .order('work_number', { ascending: true })
 
     if (contestId !== null) query = query.eq('contest_id', contestId)
