@@ -65,9 +65,26 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const contestId = Number(url.searchParams.get('contest_id') || '')
     const phase = (url.searchParams.get('phase') || 'primary') as 'primary' | 'final'
+    const view = url.searchParams.get('view') || 'ranking'
 
-    if (Number.isNaN(contestId) || (phase !== 'primary' && phase !== 'final')) {
-      return NextResponse.json({ error: 'contest_id and valid phase are required' }, { status: 400 })
+    if (Number.isNaN(contestId)) {
+      return NextResponse.json({ error: 'contest_id is required' }, { status: 400 })
+    }
+
+    if (view === 'entries') {
+      const { data: entries, error } = await supabaseAdmin
+        .from('contest_entries')
+        .select('entry_id, contest_id, work_id, work_number, status, entry_type, school_name, grade, guardian_name, guardian_email, guardian_consent, guardian_consent_at, users(name, email), works(title, category)')
+        .eq('contest_id', contestId)
+        .order('work_number', { ascending: true, nullsFirst: false })
+
+      if (error) throw error
+
+      return NextResponse.json({ entries: entries || [] })
+    }
+
+    if (phase !== 'primary' && phase !== 'final') {
+      return NextResponse.json({ error: 'valid phase is required' }, { status: 400 })
     }
 
     const ranking = await loadRanking(contestId, phase)

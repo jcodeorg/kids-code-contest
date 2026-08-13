@@ -79,9 +79,7 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
       { title: '二次集計', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><h3 className="card-title text-lg">二次集計</h3><p className="text-base-content/70">最終評価の平均点と順位の整合性を確認します。</p></div></div> },
     ],
     contest_admin: [
-      { title: 'コンテスト管理', content: <ContestAdminJudgingPanel /> },
-      { title: '一次集計', content: <ReviewPanel phase="primary" roleLabel="一次集計" /> },
-      { title: '二次集計', content: <ReviewPanel phase="final" roleLabel="二次集計" /> },
+      { title: 'コンテスト管理ダッシュボード', content: <ContestAdminJudgingPanel mode="dashboard" /> },
     ],
     admin: [
       { title: 'ユーザー管理', content: <AdminPanel /> },
@@ -97,10 +95,6 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
     judge: {
       top_submissions: [1],
       aggregate: [2],
-    },
-    contest_admin: {
-      aggregate_1: [1],
-      aggregate_2: [2],
     },
     admin: {
       system: [1],
