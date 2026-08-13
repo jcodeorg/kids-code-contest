@@ -91,3 +91,26 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const auth = await requireAuthWithRoles(req, ['contest_admin', 'admin'])
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+    const body = await req.json()
+    const contestId = Number(body?.contest_id)
+    if (Number.isNaN(contestId)) {
+      return NextResponse.json({ error: 'contest_id is required' }, { status: 400 })
+    }
+
+    const { error } = await supabaseAdmin
+      .from('contests')
+      .delete()
+      .eq('contest_id', contestId)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
+  }
+}

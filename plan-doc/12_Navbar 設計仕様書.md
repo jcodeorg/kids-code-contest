@@ -90,7 +90,9 @@ export interface NavItem {
 
 export const NAV_ITEMS: Record<Role, NavItem[]> = {
   // 応募者はナビメニューなし（ダッシュボード等に集中させる）
-  applicant: [],
+  applicant: [
+    { label: '私の作品', href: '/applicant' },
+  ],
 
   staff: [
     { label: '私の審査', href: '/staff' },
