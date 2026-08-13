@@ -19,7 +19,6 @@ export default function AppNavbar() {
   const [userName, setUserName] = useState('ゲスト')
   const [currentRole, setCurrentRole] = useState('applicant')
   const [assignedRoles, setAssignedRoles] = useState<string[]>(['applicant'])
-  const [activeContestName, setActiveContestName] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const pathRole = pathname.split('/').filter(Boolean)[0]
@@ -32,20 +31,6 @@ export default function AppNavbar() {
     return sessionRes.data.session?.access_token || null
   }
 
-  async function loadActiveContestName() {
-    try {
-      const res = await fetch('/api/contests')
-      if (!res.ok) {
-        setActiveContestName(null)
-        return
-      }
-      const data = await res.json()
-      setActiveContestName(data?.active_contest?.title || null)
-    } catch {
-      setActiveContestName(null)
-    }
-  }
-
   async function loadHeaderState() {
     const userRes = await supabase.auth.getUser()
     const user = userRes.data.user
@@ -54,7 +39,6 @@ export default function AppNavbar() {
       setUserName('ゲスト')
       setCurrentRole('applicant')
       setAssignedRoles(['applicant'])
-      setActiveContestName(null)
       return
     }
 
@@ -103,7 +87,6 @@ export default function AppNavbar() {
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
       if (mounted) {
         void loadHeaderState()
-        void loadActiveContestName()
       }
     })
 
@@ -197,11 +180,6 @@ export default function AppNavbar() {
             </nav>
           )}
 
-          {activeContestName ? (
-            <div className="hidden items-center rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold text-white/95 sm:flex">
-              {activeContestName}
-            </div>
-          ) : null}
         </div>
 
         <div className="ml-auto flex items-center gap-3">

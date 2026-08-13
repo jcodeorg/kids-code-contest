@@ -125,22 +125,28 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
     <div className="w-full px-4 py-8">
       <div className="max-w-6xl mx-auto">
         {role === 'applicant' ? (
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            <h1 className="text-3xl font-bold">{title}</h1>
+          <div className="mb-4">
             {applicantContests.length > 0 ? (
-              <label className="flex items-center gap-2 text-sm">
-                <span className="text-base-content/70">コンテスト</span>
+              <div className="relative max-w-4xl">
                 <select
-                  className="select select-bordered select-sm"
+                  className="w-full appearance-none rounded-2xl border border-base-300 bg-base-100 px-4 py-3 pr-12 text-xl font-bold text-base-content shadow-sm transition focus:border-primary focus:outline-none sm:text-2xl"
                   value={selectedApplicantContestId ?? ''}
                   onChange={(event) => setSelectedApplicantContestId(event.target.value ? Number(event.target.value) : null)}
+                  aria-label="コンテスト選択"
                 >
                   {applicantContests.map((contest) => (
-                    <option key={contest.contest_id} value={contest.contest_id}>[{contest.year}] {contest.title}</option>
+                    <option key={contest.contest_id} value={contest.contest_id}>{contest.title}</option>
                   ))}
                 </select>
-              </label>
-            ) : null}
+                <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-base-content/60">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+                    <path fillRule="evenodd" d="M5.22 7.22a.75.75 0 011.06 0L10 10.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 8.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            ) : (
+              <h1 className="text-3xl font-bold">{title}</h1>
+            )}
           </div>
         ) : (
           <h1 className="text-3xl font-bold mb-4">{title}</h1>
