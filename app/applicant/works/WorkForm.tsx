@@ -41,7 +41,7 @@ type SubmitResult = { ok: true } | { ok: false; error?: string }
 export default function WorkForm({
   initialValues,
   titleText = 'コンテスト応募フォーム',
-  submitLabel = 'ほぞん する',
+  submitLabel = 'とうろく',
   onSubmit,
   onCancel,
   onSuccess,
@@ -357,25 +357,13 @@ export default function WorkForm({
         </div>
 
         <div>
-          <label htmlFor="work-url" className="block text-sm font-medium mb-1">作品URL</label>
-          <input id="work-url" className="input input-bordered w-full" placeholder="作品URL" value={workUrl} onChange={(e) => setWorkUrl(e.target.value)} required />
+          <label htmlFor="work-url" className="block text-sm font-medium mb-1">さくひんのURL</label>
+          <input id="work-url" className="input input-bordered w-full" placeholder="さくひんのURL" value={workUrl} onChange={(e) => setWorkUrl(e.target.value)} required />
         </div>
 
         <div>
-          <label htmlFor="video-type" className="block text-sm font-medium mb-1">動画タイプ</label>
-          <select id="video-type" className="select select-bordered w-full" value={videoType} onChange={(e) => setVideoType(e.target.value)}>
-            <option value="youtube_url">YouTube URL</option>
-            <option value="mp4_file">MP4 ファイル</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="video-location" className="block text-sm font-medium mb-1">動画URL / 保存先</label>
-          <input id="video-location" className="input input-bordered w-full" placeholder="動画URL / 保存先" value={videoLocation} onChange={(e) => setVideoLocation(e.target.value)} />
-        </div>
-        <div>
-          <label htmlFor="thumbnail-file" className="block text-sm font-medium mb-1">サムネイル画像</label>
-          <input id="thumbnail-file" type="file" accept="image/*" onChange={handleThumbnailChange} />
+          <label htmlFor="thumbnail-file" className="block text-sm font-medium mb-1">がぞうファイル</label>
+          <input id="thumbnail-file" className="file-input file-input-bordered w-full" type="file" accept="image/*" onChange={handleThumbnailChange} />
           {uploadingThumbnail ? <div className="text-sm text-gray-500">アップロード中...</div> : null}
           {thumbnailUrl ? (
             <div className="mt-2 flex flex-col gap-2">
@@ -393,9 +381,10 @@ export default function WorkForm({
             </div>
           ) : null}
         </div>
+
         <div>
-          <label htmlFor="video-file" className="block text-sm font-medium mb-1">動画ファイル (mp4)</label>
-          <input id="video-file" type="file" accept="video/*" onChange={handleVideoFileChange} />
+          <label htmlFor="video-file" className="block text-sm font-medium mb-1">どうが ファイル (mp4)</label>
+          <input id="video-file" className="file-input file-input-bordered w-full" type="file" accept="video/*" onChange={handleVideoFileChange} />
           {uploadingVideo ? <div className="text-sm text-gray-500">アップロード中...</div> : null}
           {videoPreviewUrl ? (
             <div className="mt-2 flex flex-col gap-2">
@@ -406,9 +395,23 @@ export default function WorkForm({
             </div>
           ) : null}
         </div>
+
+        <div>
+          <label htmlFor="video-type" className="block text-sm font-medium mb-1">動画タイプ</label>
+          <select id="video-type" className="select select-bordered w-full" value={videoType} onChange={(e) => setVideoType(e.target.value)}>
+            <option value="youtube_url">YouTube URL</option>
+            <option value="mp4_file">MP4 ファイル</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="video-location" className="block text-sm font-medium mb-1">動画URL / 保存先</label>
+          <input id="video-location" className="input input-bordered w-full" placeholder="動画URL / 保存先" value={videoLocation} onChange={(e) => setVideoLocation(e.target.value)} />
+        </div>
+
         <div className="flex gap-2">
           <button className="btn btn-primary" disabled={saving} type="submit">{saving ? '保存中...' : submitLabel}</button>
-          <button type="button" className="btn btn-ghost" onClick={() => onCancel?.()}>{onCancel ? 'キャンセル' : '戻る'}</button>
+          <button type="button" className="btn btn-ghost" onClick={() => onCancel?.()}>{onCancel ? 'キャンセル' : 'もどる'}</button>
         </div>
       </form>
 
