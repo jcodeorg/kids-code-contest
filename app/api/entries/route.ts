@@ -25,6 +25,21 @@ type EvaluationRow = {
   is_comment_published: boolean
 }
 
+async function nextContestWorkNumber(contestId: number) {
+  const { data, error } = await supabaseAdmin
+    .from('contest_entries')
+    .select('work_number')
+    .eq('contest_id', contestId)
+    .not('work_number', 'is', null)
+    .order('work_number', { ascending: false })
+    .limit(1)
+
+  if (error) throw error
+
+  const maxNumber = Array.isArray(data) && data.length > 0 ? Number(data[0].work_number) : 99
+  return Number.isFinite(maxNumber) ? maxNumber + 1 : 100
+}
+
 async function buildEntryScoreMap(entryIds: number[]) {
   if (entryIds.length === 0) return { primary: {}, final: {} } as {
     primary: Record<number, number>
@@ -158,10 +173,12 @@ export async function POST(req: Request) {
     }
 
     if (exists) {
+      const nextNumber = exists.work_number ?? (await nextContestWorkNumber(contestId))
       const { data: updated, error: updateErr } = await supabaseAdmin
         .from('contest_entries')
         .update({
           work_id: workId,
+          work_number: nextNumber,
           entry_type: entryType,
           status: 'submitted',
         })
@@ -173,16 +190,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ entry: updated, replaced: true })
     }
 
-    const { data: maxRow, error: maxErr } = await supabaseAdmin
-      .from('contest_entries')
-      .select('work_number')
-      .eq('contest_id', contestId)
-      .order('work_number', { ascending: false })
-      .limit(1)
-
-    if (maxErr) return NextResponse.json({ error: maxErr.message }, { status: 500 })
-    const maxNumber = Array.isArray(maxRow) && maxRow.length > 0 ? Number(maxRow[0].work_number) : 99
-    const nextNumber = Number.isFinite(maxNumber) ? maxNumber + 1 : 100
+    const nextNumber = await nextContestWorkNumber(contestId)
 
     const { data: inserted, error: insertErr } = await supabaseAdmin
       .from('contest_entries')
@@ -249,10 +257,13 @@ export async function PUT(req: Request) {
     if (existingEntryErr) return NextResponse.json({ error: existingEntryErr.message }, { status: 500 })
     if (!existingEntry) return NextResponse.json({ error: 'entry not found' }, { status: 404 })
 
+    const nextNumber = existingEntry.work_number ?? (await nextContestWorkNumber(contestId))
+
     const { data: updated, error: updateErr } = await supabaseAdmin
       .from('contest_entries')
       .update({
         work_id: workId,
+        work_number: nextNumber,
         entry_type: entryType,
         status: 'submitted',
       })
@@ -262,6 +273,54 @@ export async function PUT(req: Request) {
 
     if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
     return NextResponse.json({ entry: updated })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const auth = await requireAuthWithRoles(req, ['applicant'])
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+    const body = await req.json()
+    const contestId = Number(body?.contest_id)
+    const entryId = Number(body?.entry_id)
+
+    if (Number.isNaN(contestId)) {
+      return NextResponse.json({ error: 'contest_id required' }, { status: 400 })
+    }
+
+    let targetEntryQuery = supabaseAdmin
+      .from('contest_entries')
+      .select('entry_id, contest_id, work_id, work_number, user_id, status')
+      .eq('contest_id', contestId)
+      .eq('user_id', auth.identity.userId)
+
+    if (Number.isFinite(entryId) && entryId > 0) {
+      targetEntryQuery = targetEntryQuery.eq('entry_id', entryId)
+    }
+
+    const { data: existingEntry, error: existingEntryErr } = await targetEntryQuery
+      .limit(1)
+      .maybeSingle()
+
+    if (existingEntryErr) return NextResponse.json({ error: existingEntryErr.message }, { status: 500 })
+    if (!existingEntry) return NextResponse.json({ error: 'entry not found' }, { status: 404 })
+
+    const { data: cleared, error: clearErr } = await supabaseAdmin
+      .from('contest_entries')
+      .update({
+        work_id: null,
+        work_number: null,
+        status: 'draft',
+      })
+      .eq('entry_id', existingEntry.entry_id)
+      .select()
+      .single()
+
+    if (clearErr) return NextResponse.json({ error: clearErr.message }, { status: 500 })
+    return NextResponse.json({ entry: cleared, cleared: true })
   } catch (err: unknown) {
     return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }

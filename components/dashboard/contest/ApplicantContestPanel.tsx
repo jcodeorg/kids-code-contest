@@ -128,6 +128,42 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
     }
   }
 
+  async function cancelEntry() {
+    if (!selectedContestId) {
+      setStatus('対象コンテストを選択してください')
+      return
+    }
+
+    const currentEntry = entries.find((entry) => entry.contest_id === selectedContestId)
+    if (!currentEntry) {
+      setStatus('応募中の作品はありません')
+      return
+    }
+
+    setStatus('応募を取り消し中...')
+    try {
+      const headers = await buildAuthHeaders(true)
+      const res = await fetch('/api/entries', {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({
+          contest_id: selectedContestId,
+          entry_id: currentEntry.entry_id,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setStatus('応募の取り消しに失敗しました: ' + (data?.error || res.status))
+        return
+      }
+      setSelectedWorkId('')
+      setStatus(`応募を取り消しました: 作品番号は解除されました`)
+      await loadAll()
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : '処理に失敗しました')
+    }
+  }
+
   const selectedContestName = selectedContestId ? contests.find((contest) => contest.contest_id === selectedContestId)?.title || '選択中のコンテスト' : '未選択'
 
   return (
@@ -143,7 +179,7 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
             <span>対象コンテスト: <strong>{selectedContestName}</strong></span>
             {selectedContestId ? (() => {
               const currentEntry = entries.find((entry) => entry.contest_id === selectedContestId)
-              return currentEntry?.work_id ? <span>応募中の作品: <strong>work_id={currentEntry.work_id}</strong></span> : <span>応募中の作品: <strong>未設定</strong></span>
+              return currentEntry?.work_id ? <span>応募中の作品: <strong>#{currentEntry.work_number ?? '-'}</strong></span> : <span>応募中の作品: <strong>未設定</strong></span>
             })() : <span>応募中の作品: <strong>未選択</strong></span>}
           </div>
 
@@ -155,24 +191,33 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
                   const selectedContestEntry = selectedContestId ? entries.find((entry) => entry.contest_id === selectedContestId) : undefined
                   const isCurrentEntry = !!selectedContestEntry && !!selectedContestEntry.work_id && selectedContestEntry.work_id === w.work_id
                   const statusLabel = isCurrentEntry
-                    ? `応募済み (work_id=${selectedContestEntry.work_id})`
-                    : (selectedContestEntry?.work_id ? `別作品を応募済み (work_id=${selectedContestEntry.work_id})` : '未応募')
+                    ? `応募済み (#${selectedContestEntry.work_number ?? '-'})`
+                    : (selectedContestEntry?.work_id ? `別作品を応募済み (#${selectedContestEntry.work_number ?? '-'})` : '未応募')
 
                   return (
                     <tr key={w.work_id}>
-                      <td>{w.title}</td>
+                      <td>
+                        {w.title}
+                        {isCurrentEntry && Number.isFinite(selectedContestEntry?.work_number) ? ` - [#${selectedContestEntry.work_number}]` : ''}
+                      </td>
                       <td>{w.category}</td>
                       <td>{w.short_description}</td>
                       <td className="max-w-xs truncate">{w.work_url}</td>
                       <td>{statusLabel}</td>
                       <td className="flex flex-wrap gap-2">
-                        <button
-                          className="btn btn-sm btn-primary"
-                          type="button"
-                          onClick={() => void submitEntry(w.work_id, isCurrentEntry ? 'replace' : (selectedContestEntry ? 'replace' : 'create'))}
-                        >
-                          {isCurrentEntry ? 'この作品で応募中' : (selectedContestEntry ? '応募作品を変更' : '応募する')}
-                        </button>
+                        {isCurrentEntry ? (
+                          <button className="btn btn-sm btn-warning" type="button" onClick={() => void cancelEntry()}>
+                            応募をやめる
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            type="button"
+                            onClick={() => void submitEntry(w.work_id, selectedContestEntry ? 'replace' : 'create')}
+                          >
+                            これを応募する
+                          </button>
+                        )}
                         <Link className="btn btn-sm btn-outline" href={`/applicant/works/${w.work_id}`}>編集</Link>
                       </td>
                     </tr>

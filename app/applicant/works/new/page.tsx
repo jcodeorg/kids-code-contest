@@ -18,10 +18,15 @@ export default function NewWorkPage() {
 
   async function handleSubmit(values: WorkFormValues) {
     const headers = await buildAuthHeaders()
+    const contestRes = await fetch('/api/contests')
+    const contestData = contestRes.ok ? await contestRes.json() : null
+    const contestId = contestData?.active_contest?.contest_id ?? contestData?.contests?.[0]?.contest_id ?? null
+
     const res = await fetch('/api/works', {
       method: 'POST',
       headers,
       body: JSON.stringify({
+        contest_id: contestId,
         title: values.title,
         category: values.category,
         short_description: values.short_description,

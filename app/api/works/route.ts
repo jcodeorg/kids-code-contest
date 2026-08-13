@@ -34,6 +34,7 @@ export async function POST(req: Request) {
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
     const body = await req.json()
+    const contestId = Number(body?.contest_id)
     const title = typeof body?.title === 'string' ? body.title.trim() : ''
     const category = typeof body?.category === 'string' ? body.category.trim() : ''
     const shortDescription = typeof body?.short_description === 'string' ? body.short_description.trim() : ''
@@ -69,6 +70,57 @@ export async function POST(req: Request) {
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    if (Number.isFinite(contestId) && contestId > 0) {
+      const { data: existingEntry, error: existingEntryErr } = await supabaseAdmin
+        .from('contest_entries')
+        .select('entry_id, work_number')
+        .eq('contest_id', contestId)
+        .eq('user_id', auth.identity.userId)
+        .maybeSingle()
+
+      if (existingEntryErr) return NextResponse.json({ error: existingEntryErr.message }, { status: 500 })
+
+      if (existingEntry) {
+        const { error: updateEntryErr } = await supabaseAdmin
+          .from('contest_entries')
+          .update({
+            work_id: data.work_id,
+            work_number: existingEntry.work_number ?? 100,
+            status: 'draft',
+          })
+          .eq('entry_id', existingEntry.entry_id)
+
+        if (updateEntryErr) return NextResponse.json({ error: updateEntryErr.message }, { status: 500 })
+      } else {
+        const { data: maxRow, error: maxRowErr } = await supabaseAdmin
+          .from('contest_entries')
+          .select('work_number')
+          .eq('contest_id', contestId)
+          .order('work_number', { ascending: false })
+          .limit(1)
+
+        if (maxRowErr) return NextResponse.json({ error: maxRowErr.message }, { status: 500 })
+
+        const maxNumber = Array.isArray(maxRow) && maxRow.length > 0 ? Number(maxRow[0].work_number) : 99
+        const nextNumber = Number.isFinite(maxNumber) ? maxNumber + 1 : 100
+
+        const { error: insertEntryErr } = await supabaseAdmin
+          .from('contest_entries')
+          .insert({
+            contest_id: contestId,
+            user_id: auth.identity.userId,
+            work_id: data.work_id,
+            work_number: nextNumber,
+            status: 'draft',
+            entry_type: 'individual',
+            is_primary_passed: false,
+          })
+
+        if (insertEntryErr) return NextResponse.json({ error: insertEntryErr.message }, { status: 500 })
+      }
+    }
+
     return NextResponse.json({ work: data })
   } catch (err: unknown) {
     return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
