@@ -141,8 +141,9 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
 
   const needsInitialInput = !guardianEmail
   const consentStatus = entry?.guardian_consent || 'pending'
-  const statusLabel = consentStatus === 'approved' ? '同意済み' : consentStatus === 'rejected' ? '保護者の確認待ち' : '未同意'
-  const contestLabel = entry?.contests?.title ? `[${entry.contests.year ?? '-'}] ${entry.contests.title}` : (selectedContestId ? `contest_id: ${selectedContestId}` : '対象コンテスト未選択')
+  const consentLabel = consentStatus === 'approved' ? 'ほごしゃ どういずみ' : consentStatus === 'rejected' ? 'ほごしゃ かくにんちゅう' : 'まだ どういしてない'
+  const entryStatusLabel = entry?.status === 'submitted' ? 'さくひん おうぼずみ' : entry?.status === 'draft' ? 'さくひん まだ' : entry?.status || 'まだ'
+  const contestLabel = entry?.contests?.title ? `[${entry.contests.year ?? '-'}] ${entry.contests.title}` : (selectedContestId ? `コンテスト: ${selectedContestId}` : 'まだ選んでない')
 
   if (!detailOpen) {
     return (
@@ -150,14 +151,17 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
         <div className="card-body">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <h3 className="card-title text-lg">応募者情報と保護者同意</h3>
-              <span className="badge badge-outline">{statusLabel}</span>
+              <h3 className="card-title text-lg">おうぼステータス</h3>
+              <div className="flex items-center gap-2">
+                <span className="badge badge-outline">{consentLabel}</span>
+                <span className="badge badge-outline">{entryStatusLabel}</span>
+              </div>
             </div>
             <button className="btn btn-sm btn-primary" type="button" onClick={() => setDetailOpen(true)}>
-              詳細を表示
+              もっとみる
             </button>
           </div>
-          <div className="text-sm text-base-content/70 mt-2">対象コンテスト: {contestLabel}</div>
+          <div className="text-sm text-base-content/70 mt-2">コンテスト: {contestLabel}</div>
         </div>
       </div>
     )
@@ -167,49 +171,49 @@ export default function ApplicantGuardianPanel({ selectedContestId }: { selected
     <div className="card bg-base-100 shadow-md border border-base-200 mb-6">
       <div className="card-body gap-4">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="card-title">応募者情報と保護者同意</h3>
-          <button className="btn btn-sm btn-ghost" type="button" onClick={() => setDetailOpen(false)}>閉じる</button>
+          <h3 className="card-title">おうぼステータス</h3>
+          <button className="btn btn-sm btn-ghost" type="button" onClick={() => setDetailOpen(false)}>とじる</button>
         </div>
 
         <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
-          <div>対象コンテスト: <strong>{contestLabel}</strong></div>
+          <div>コンテスト: <strong>{contestLabel}</strong></div>
         </div>
 
         <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
-          <div>お名前: <strong>{profile.name || '-'}</strong></div>
+          <div>おなまえ: <strong>{profile.name || '-'}</strong></div>
           <div>ふりがな: <strong>{profile.name_kana || '-'}</strong></div>
           <div>メール: <strong>{profile.email}</strong></div>
         </div>
 
         {entry ? (
           <div className="rounded-box bg-base-200 p-4 text-sm space-y-1">
-            <div>contest_id: <strong>{entry.contest_id ?? '-'}</strong></div>
-            <div>work_id: <strong>{entry.work_id ?? '-'}</strong></div>
-            <div>応募状態: <strong>{entry.status || 'draft'}</strong></div>
-            <div>保護者同意: <strong>{statusLabel}</strong>{entry.guardian_consent_at ? `（${new Date(entry.guardian_consent_at).toLocaleString()}）` : ''}</div>
-            <div>学校: <strong>{entry.school_name || '-'}</strong></div>
-            <div>学年: <strong>{entry.grade || '-'}</strong></div>
-            <div>保護者氏名: <strong>{entry.guardian_name || '-'}</strong></div>
-            <div>保護者電話: <strong>{entry.guardian_phone || '-'}</strong></div>
+            <div>こんてすと: <strong>{entry.contest_id ?? '-'}</strong></div>
+            <div>さくひん: <strong>{entry.work_id ?? '-'}</strong></div>
+            <div>おうぼのじょうたい: <strong>{entryStatusLabel}</strong></div>
+            <div>ほごしゃ どうい: <strong>{consentLabel}</strong>{entry.guardian_consent_at ? `（${new Date(entry.guardian_consent_at).toLocaleString()}）` : ''}</div>
+            <div>がっこう: <strong>{entry.school_name || '-'}</strong></div>
+            <div>がくねん: <strong>{entry.grade || '-'}</strong></div>
+            <div>ほごしゃのなまえ: <strong>{entry.guardian_name || '-'}</strong></div>
+            <div>ほごしゃのでんわ: <strong>{entry.guardian_phone || '-'}</strong></div>
           </div>
         ) : null}
 
         {needsInitialInput ? (
-          <div className="alert alert-warning text-sm">まず、保護者メールアドレスを入力して同意メールを送ってください。</div>
+          <div className="alert alert-warning text-sm">まず、ほごしゃのメールアドレスを入れて、どういメールをおくってください。</div>
         ) : null}
 
         <form onSubmit={sendConsentRequest} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full md:col-span-2">
-            <div className="label"><span className="label-text">保護者のメールアドレス</span></div>
+            <div className="label"><span className="label-text">ほごしゃのメールアドレス</span></div>
             <input className="input input-bordered w-full" type="email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} placeholder="おうちの人のメールアドレス" required />
             {guardianEmail && !isValidEmail(guardianEmail) ? (
-              <div className="text-xs text-error mt-1">メールアドレスの書き方を確認してください（例: guardian@example.com）</div>
+              <div className="text-xs text-error mt-1">メールアドレスのかたちを かくにんしてください（例: guardian@example.com）</div>
             ) : null}
           </label>
 
           <div className="md:col-span-2 flex flex-wrap gap-3">
-            <button className="btn btn-primary" type="submit">同意メールを送る</button>
-            {!needsInitialInput ? <button className="btn btn-ghost" type="button" onClick={resend}>再送する</button> : null}
+            <button className="btn btn-primary" type="submit">どういメールを送る</button>
+            {!needsInitialInput ? <button className="btn btn-ghost" type="button" onClick={resend}>もういちどおくる</button> : null}
             <button className="btn btn-ghost" type="button" onClick={fetchState}>更新</button>
           </div>
         </form>

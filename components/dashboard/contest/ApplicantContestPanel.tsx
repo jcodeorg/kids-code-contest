@@ -171,28 +171,28 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
       <section className="card bg-base-100 shadow-md border border-base-200">
         <div className="card-body gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="card-title">作品ライブラリ</h3>
-            <Link className="btn btn-primary" href="/applicant/works/new">作品を追加</Link>
+            <h3 className="card-title">作品一覧</h3>
+            <Link className="btn btn-primary" href="/applicant/works/new">作品をついか</Link>
           </div>
 
           <div className="rounded-box bg-base-200 p-3 text-sm flex flex-wrap items-center justify-between gap-3">
-            <span>対象コンテスト: <strong>{selectedContestName}</strong></span>
+            <span>選ぶコンテスト: <strong>{selectedContestName}</strong></span>
             {selectedContestId ? (() => {
               const currentEntry = entries.find((entry) => entry.contest_id === selectedContestId)
-              return currentEntry?.work_id ? <span>応募中の作品: <strong>#{currentEntry.work_number ?? '-'}</strong></span> : <span>応募中の作品: <strong>未設定</strong></span>
-            })() : <span>応募中の作品: <strong>未選択</strong></span>}
+              return currentEntry?.work_id ? <span>応募中: <strong>#{currentEntry.work_number ?? '-'}</strong></span> : <span>応募中: <strong>まだなし</strong></span>
+            })() : <span>応募中: <strong>まだ選んでない</strong></span>}
           </div>
 
           <div className="overflow-x-auto">
             <table className="table table-zebra">
-              <thead><tr><th>タイトル</th><th>カテゴリ</th><th>説明</th><th>URL</th><th>応募状況</th><th>操作</th></tr></thead>
+              <thead><tr><th>作品名</th><th>種類</th><th>せつめい</th><th>URL</th><th>状態</th><th>ボタン</th></tr></thead>
               <tbody>
                 {works.map((w) => {
                   const selectedContestEntry = selectedContestId ? entries.find((entry) => entry.contest_id === selectedContestId) : undefined
                   const isCurrentEntry = !!selectedContestEntry && !!selectedContestEntry.work_id && selectedContestEntry.work_id === w.work_id
                   const statusLabel = isCurrentEntry
-                    ? `応募済み (#${selectedContestEntry.work_number ?? '-'})`
-                    : (selectedContestEntry?.work_id ? `別作品を応募済み (#${selectedContestEntry.work_number ?? '-'})` : '未応募')
+                    ? `応募した (#${selectedContestEntry.work_number ?? '-'})`
+                    : (selectedContestEntry?.work_id ? `ほかの作品を応募中 (#${selectedContestEntry.work_number ?? '-'})` : 'まだ応募していない')
 
                   return (
                     <tr key={w.work_id}>
