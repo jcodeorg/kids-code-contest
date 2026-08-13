@@ -15,19 +15,17 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
   const rootRole = parts[0] && validRoleNames.has(parts[0]) ? parts[0] : ''
   const feature = parts[1] || ''
   const role = rootRole || paramsRole || 'applicant'
-  const [applicantContests, setApplicantContests] = useState<Array<{ contest_id: number; title: string; year: number; status: string }>>([])
+  const [allContests, setAllContests] = useState<Array<{ contest_id: number; title: string; year: number; status: string }>>([])
   const [selectedApplicantContestId, setSelectedApplicantContestId] = useState<number | null>(null)
 
   useEffect(() => {
-    if (role !== 'applicant') return
-
-    async function loadApplicantContestState() {
+    async function loadContestState() {
       try {
         const res = await fetch('/api/contests')
         if (!res.ok) return
         const data = await res.json()
         const contests = Array.isArray(data?.contests) ? data.contests : []
-        setApplicantContests(contests)
+        setAllContests(contests)
 
         const activeContest = data?.active_contest
         const nextSelectedId = activeContest?.contest_id ?? contests[0]?.contest_id ?? null
@@ -35,11 +33,11 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
           setSelectedApplicantContestId((current) => current ?? nextSelectedId)
         }
       } catch {
-        setApplicantContests([])
+        setAllContests([])
       }
     }
 
-    void loadApplicantContestState()
+    void loadContestState()
   }, [role])
 
   const titleMap: Record<string, string> = {
@@ -51,13 +49,13 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
     judge: '審査員ダッシュボード',
     admin: '管理者ダッシュボード',
   }
-  const applicantContestName = applicantContests.find((contest) => contest.contest_id === selectedApplicantContestId)?.title || 'コンテスト未選択'
-  const title = role === 'applicant' ? applicantContestName : (titleMap[role] || `${role} ダッシュボード`)
+  const selectedContestName = allContests.find((contest) => contest.contest_id === selectedApplicantContestId)?.title || 'コンテスト未選択'
+  const title = allContests.length > 0 ? selectedContestName : (titleMap[role] || `${role} ダッシュボード`)
 
   const roleSections: Record<string, { title: string; content: React.ReactNode }[]> = {
     applicant: [
       { title: '応募者情報と保護者同意', content: <ApplicantGuardianPanel selectedContestId={selectedApplicantContestId} /> },
-      { title: '作品ライブラリと応募', content: <ApplicantContestPanel contests={applicantContests} selectedContestId={selectedApplicantContestId} onSelectedContestIdChange={setSelectedApplicantContestId} /> },
+      { title: '作品ライブラリと応募', content: <ApplicantContestPanel contests={allContests} selectedContestId={selectedApplicantContestId} onSelectedContestIdChange={setSelectedApplicantContestId} /> },
       { title: '提出状況', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><p>応募開始前・審査中・結果待ちの管理状況をここに表示します。</p></div></div> },
     ],
     staff: [
@@ -124,33 +122,29 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
   return (
     <div className="w-full px-4 py-8">
       <div className="max-w-6xl mx-auto">
-        {role === 'applicant' ? (
-          <div className="mb-4">
-            {applicantContests.length > 0 ? (
-              <div className="relative max-w-4xl">
-                <select
-                  className="w-full appearance-none rounded-2xl border border-base-300 bg-base-100 px-4 py-3 pr-12 text-xl font-bold text-base-content shadow-sm transition focus:border-primary focus:outline-none sm:text-2xl"
-                  value={selectedApplicantContestId ?? ''}
-                  onChange={(event) => setSelectedApplicantContestId(event.target.value ? Number(event.target.value) : null)}
-                  aria-label="コンテスト選択"
-                >
-                  {applicantContests.map((contest) => (
-                    <option key={contest.contest_id} value={contest.contest_id}>{contest.title}</option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-base-content/60">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
-                    <path fillRule="evenodd" d="M5.22 7.22a.75.75 0 011.06 0L10 10.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 8.28a.75.75 0 010-1.06z" clipRule="evenodd" />
-                  </svg>
-                </div>
+        <div className="mb-4">
+          {allContests.length > 0 ? (
+            <div className="relative max-w-4xl">
+              <select
+                className="w-full appearance-none rounded-2xl border border-base-300 bg-base-100 px-4 py-3 pr-12 text-xl font-bold text-base-content shadow-sm transition focus:border-primary focus:outline-none sm:text-2xl"
+                value={selectedApplicantContestId ?? ''}
+                onChange={(event) => setSelectedApplicantContestId(event.target.value ? Number(event.target.value) : null)}
+                aria-label="コンテスト選択"
+              >
+                {allContests.map((contest) => (
+                  <option key={contest.contest_id} value={contest.contest_id}>{contest.title}</option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-base-content/60">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
+                  <path fillRule="evenodd" d="M5.22 7.22a.75.75 0 011.06 0L10 10.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 8.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+                </svg>
               </div>
-            ) : (
-              <h1 className="text-3xl font-bold">{title}</h1>
-            )}
-          </div>
-        ) : (
-          <h1 className="text-3xl font-bold mb-4">{title}</h1>
-        )}
+            </div>
+          ) : (
+            <h1 className="text-3xl font-bold">{title}</h1>
+          )}
+        </div>
         <div className="space-y-6">
           {currentSections.map((section) => (
             <div key={section.title}>{section.content}</div>

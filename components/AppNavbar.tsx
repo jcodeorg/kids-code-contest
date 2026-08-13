@@ -161,13 +161,30 @@ export default function AppNavbar() {
   return (
     <header className="w-full border-b border-[#3f84e8] bg-[#4D96FF] text-white shadow-sm">
       <div className="mx-auto flex h-20 max-w-7xl items-center gap-3 px-3 sm:px-4">
-        <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+          {navItems.length > 0 ? (
+            <div className="dropdown dropdown-start lg:hidden">
+              <button tabIndex={0} type="button" className="btn btn-sm border-white/30 bg-white/10 text-white hover:bg-white/20" aria-label="メニューを開く">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </button>
+              <ul tabIndex={0} className="menu dropdown-content z-50 mt-2 w-64 rounded-box bg-base-100 p-2 text-base-content shadow-lg">
+                {navItems.map((item) => (
+                  <li key={`${item.href}-${item.label}`}>
+                    <Link href={item.href}>{item.label}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <Link href="/" className="shrink-0 text-2xl font-extrabold tracking-tight text-[#ffb020]">
             コンテスト
           </Link>
 
           {navItems.length > 0 && (
-            <nav className="hidden items-center gap-2 md:flex" aria-label="メインナビゲーション">
+            <nav className="hidden items-center gap-2 lg:flex" aria-label="メインナビゲーション">
               {navItems.map((item) => (
                 <Link
                   key={`${item.href}-${item.label}`}
@@ -179,7 +196,6 @@ export default function AppNavbar() {
               ))}
             </nav>
           )}
-
         </div>
 
         <div className="ml-auto flex items-center gap-3">
