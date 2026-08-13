@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase/client'
 
 type Contest = {
@@ -8,6 +9,8 @@ type Contest = {
   title: string
   year: number
   status: string
+  entry_start_at?: string | null
+  entry_end_at?: string | null
 }
 
 type RankingRow = {
@@ -21,24 +24,13 @@ type RankingRow = {
 }
 
 export default function ContestAdminJudgingPanel() {
+  const router = useRouter()
   const [contests, setContests] = useState<Contest[]>([])
   const [contestId, setContestId] = useState<number | null>(null)
   const [phase, setPhase] = useState<'primary' | 'final'>('primary')
   const [ranking, setRanking] = useState<RankingRow[]>([])
   const [status, setStatus] = useState('')
   const [topN, setTopN] = useState(20)
-
-  const [newTitle, setNewTitle] = useState('')
-  const [newYear, setNewYear] = useState(new Date().getFullYear())
-  const [newStatus, setNewStatus] = useState('draft')
-  const [newEntryStartAt, setNewEntryStartAt] = useState('')
-  const [newEntryEndAt, setNewEntryEndAt] = useState('')
-  const [editingContestId, setEditingContestId] = useState<number | null>(null)
-  const [editTitle, setEditTitle] = useState('')
-  const [editYear, setEditYear] = useState(new Date().getFullYear())
-  const [editStatus, setEditStatus] = useState('draft')
-  const [editEntryStartAt, setEditEntryStartAt] = useState('')
-  const [editEntryEndAt, setEditEntryEndAt] = useState('')
 
   async function buildAuthHeaders(withJson = false) {
     const session = await supabase.auth.getSession()
@@ -88,87 +80,6 @@ export default function ContestAdminJudgingPanel() {
     }, 0)
     return () => window.clearTimeout(timerId)
   }, [contestId, phase, loadRanking])
-
-  function resetEditDraft() {
-    setEditingContestId(null)
-    setEditTitle('')
-    setEditYear(new Date().getFullYear())
-    setEditStatus('draft')
-    setEditEntryStartAt('')
-    setEditEntryEndAt('')
-  }
-
-  function startEditContest(contest: Contest) {
-    setEditingContestId(contest.contest_id)
-    setEditTitle(contest.title)
-    setEditYear(contest.year)
-    setEditStatus(contest.status)
-    setEditEntryStartAt(contest.entry_start_at || '')
-    setEditEntryEndAt(contest.entry_end_at || '')
-  }
-
-  async function createContest(e: React.FormEvent) {
-    e.preventDefault()
-    setStatus('コンテスト作成中...')
-    try {
-      const headers = await buildAuthHeaders(true)
-      const res = await fetch('/api/admin/contests', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          title: newTitle,
-          year: newYear,
-          status: newStatus,
-          entry_start_at: newEntryStartAt,
-          entry_end_at: newEntryEndAt,
-        }),
-      })
-      const d = await res.json()
-      if (!res.ok) {
-        setStatus('作成失敗: ' + (d?.error || res.status))
-        return
-      }
-      setStatus('コンテストを作成しました')
-      setNewTitle('')
-      setNewYear(new Date().getFullYear())
-      setNewStatus('draft')
-      setNewEntryStartAt('')
-      setNewEntryEndAt('')
-      await loadContests()
-    } catch (err: unknown) {
-      setStatus(err instanceof Error ? err.message : '作成に失敗しました')
-    }
-  }
-
-  async function updateContest() {
-    if (editingContestId === null) return
-    setStatus('コンテストを更新中...')
-    try {
-      const headers = await buildAuthHeaders(true)
-      const res = await fetch('/api/admin/contests', {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({
-          contest_id: editingContestId,
-          title: editTitle,
-          year: editYear,
-          status: editStatus,
-          entry_start_at: editEntryStartAt,
-          entry_end_at: editEntryEndAt,
-        }),
-      })
-      const d = await res.json()
-      if (!res.ok) {
-        setStatus('更新失敗: ' + (d?.error || res.status))
-        return
-      }
-      setStatus('コンテストを更新しました')
-      resetEditDraft()
-      await loadContests()
-    } catch (err: unknown) {
-      setStatus(err instanceof Error ? err.message : '更新に失敗しました')
-    }
-  }
 
   async function deleteContest(contest: Contest) {
     if (!window.confirm(`「${contest.title}」を削除しますか？`)) return
@@ -243,7 +154,13 @@ export default function ContestAdminJudgingPanel() {
     <div className="space-y-6">
       <section className="card bg-base-100 shadow-md border border-base-200">
         <div className="card-body gap-4">
-          <h3 className="card-title">コンテスト一覧</h3>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="card-title">コンテスト一覧</h3>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => router.push('/contest_admin/new')}>
+              新規作成
+            </button>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="table table-zebra">
               <thead>
@@ -269,7 +186,9 @@ export default function ContestAdminJudgingPanel() {
                         : '-'}
                     </td>
                     <td className="space-x-2">
-                      <button className="btn btn-xs btn-ghost" onClick={() => startEditContest(contest)}>修正</button>
+                      <button className="btn btn-xs btn-ghost" onClick={() => router.push(`/contest_admin/${contest.contest_id}/edit`)}>
+                        編集
+                      </button>
                       <button className="btn btn-xs btn-error" onClick={() => deleteContest(contest)}>削除</button>
                     </td>
                   </tr>
@@ -277,55 +196,6 @@ export default function ContestAdminJudgingPanel() {
               </tbody>
             </table>
           </div>
-        </div>
-      </section>
-
-      {editingContestId !== null ? (
-        <section className="card bg-base-100 shadow-md border border-base-200">
-          <div className="card-body gap-4">
-            <h3 className="card-title">コンテスト修正</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input className="input input-bordered" placeholder="大会名" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required />
-              <input className="input input-bordered" type="number" value={editYear} onChange={(e) => setEditYear(Number(e.target.value))} required />
-              <select className="select select-bordered" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
-                <option value="draft">draft</option>
-                <option value="accepting">accepting</option>
-                <option value="primary_judging">primary_judging</option>
-                <option value="final_judging">final_judging</option>
-                <option value="completed">completed</option>
-              </select>
-              <div />
-              <input className="input input-bordered" type="datetime-local" value={editEntryStartAt} onChange={(e) => setEditEntryStartAt(e.target.value)} required />
-              <input className="input input-bordered" type="datetime-local" value={editEntryEndAt} onChange={(e) => setEditEntryEndAt(e.target.value)} required />
-            </div>
-            <div className="flex gap-2">
-              <button className="btn btn-primary" onClick={updateContest}>保存</button>
-              <button className="btn btn-ghost" onClick={resetEditDraft}>キャンセル</button>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="card bg-base-100 shadow-md border border-base-200">
-        <div className="card-body gap-4">
-          <h3 className="card-title">コンテスト作成</h3>
-          <form className="grid grid-cols-1 md:grid-cols-2 gap-3" onSubmit={createContest}>
-            <input className="input input-bordered" placeholder="大会名" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} required />
-            <input className="input input-bordered" type="number" value={newYear} onChange={(e) => setNewYear(Number(e.target.value))} required />
-            <select className="select select-bordered" value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
-              <option value="draft">draft</option>
-              <option value="accepting">accepting</option>
-              <option value="primary_judging">primary_judging</option>
-              <option value="final_judging">final_judging</option>
-              <option value="completed">completed</option>
-            </select>
-            <div />
-            <input className="input input-bordered" type="datetime-local" value={newEntryStartAt} onChange={(e) => setNewEntryStartAt(e.target.value)} required />
-            <input className="input input-bordered" type="datetime-local" value={newEntryEndAt} onChange={(e) => setNewEntryEndAt(e.target.value)} required />
-            <div className="md:col-span-2">
-              <button className="btn btn-primary" type="submit">作成</button>
-            </div>
-          </form>
         </div>
       </section>
 
