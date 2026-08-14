@@ -431,6 +431,7 @@ export default function WorkForm({
               {videoFileName || (videoFileUrl ? 'アップロード済み' : 'ファイルが選択されていません')}
             </span>
           </div>
+          <p className="mt-1 text-xs text-base-content/60">iPhoneで録画する際は、「互換性優先（設定 → カメラ → フォーマット）」をご利用ください。</p>
           {uploadingVideo ? <div className="text-sm text-gray-500">アップロード中...</div> : null}
           {videoPreviewUrl ? (
             <div className="mt-2 flex flex-col gap-2">
