@@ -60,7 +60,7 @@ export default function ContestAdminJudgingPanel({ mode = 'dashboard' }: Contest
       return
     }
 
-    const contestsData = Array.isArray(d.contests) ? d.contests : []
+    const contestsData = (Array.isArray(d.contests) ? d.contests : []) as Contest[]
     const activeContestId = d?.active_contest?.contest_id ?? contestsData[0]?.contest_id ?? null
 
     setContests(contestsData)

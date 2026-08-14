@@ -29,7 +29,7 @@ export default async function Page({ searchParams }: Props) {
   // fetch contest entry with the token using admin client
   const { data, error } = await supabaseAdmin
     .from('contest_entries')
-    .select('entry_id, contest_id, user_id, school_name, grade, guardian_email, guardian_name, guardian_phone, guardian_consent, name, name_kana, users(email)')
+    .select('entry_id, contest_id, user_id, school_name, grade, guardian_email, guardian_name, guardian_phone, guardian_consent, name, name_kana, users(name,email)')
     .eq('guardian_consent_token', token)
     .limit(1)
     .single()
