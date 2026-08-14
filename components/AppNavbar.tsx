@@ -25,6 +25,7 @@ export default function AppNavbar() {
   const validRoleNames = new Set(['applicant', 'staff', 'staff_primary', 'staff_manager', 'judge', 'contest_admin', 'admin'])
   const effectiveRole = pathRole && validRoleNames.has(pathRole) ? pathRole : null
   const navItems = effectiveRole ? NAV_ITEMS[effectiveRole] ?? [] : []
+  const switchableRoles = assignedRoles.filter((role) => role !== currentRole)
 
   async function getAccessToken() {
     const sessionRes = await supabase.auth.getSession()
@@ -215,20 +216,13 @@ export default function AppNavbar() {
             <ul tabIndex={0} className="menu dropdown-content z-50 mt-2 w-64 rounded-box bg-base-100 p-2 text-base-content shadow-lg">
               {signedIn ? (
                 <>
-                  <li className="menu-title"><span>ロール切替</span></li>
-                  {assignedRoles.map((r) => (
+                  {switchableRoles.map((r) => (
                     <li key={r}>
-                      <button
-                        type="button"
-                        className={r === currentRole ? 'active' : ''}
-                        onClick={() => handleRoleSwitch(r)}
-                        disabled={busy || r === currentRole}
-                      >
-                        {ROLE_LABELS[r] || r}
+                      <button type="button" onClick={() => handleRoleSwitch(r)} disabled={busy}>
+                        ロール切替: {ROLE_LABELS[r] || r}
                       </button>
                     </li>
                   ))}
-                  <li className="menu-title"><span>アカウント</span></li>
                   <li>
                     <button type="button" onClick={handleSignOut} disabled={busy} className="text-error">
                       サインアウト
