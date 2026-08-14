@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase/client'
 
 type Contest = { contest_id: number; title: string; year: number; status: string }
-type Entry = { entry_id: number; work_id: string; work_number: number; status: string; primary_avg_score?: number; primary_review_count?: number; own_total_score?: number | null; works?: { title?: string; thumbnail_url?: string | null } }
+type Entry = { entry_id: number; work_id: string; work_number: number; status: string; primary_avg_score?: number; primary_review_count?: number; final_avg_score?: number; own_total_score?: number | null; works?: { title?: string; thumbnail_url?: string | null } }
 
 export default function StaffReviewList() {
   const [contests, setContests] = useState<Contest[]>([])
@@ -117,7 +117,7 @@ export default function StaffReviewList() {
         {loading ? <div className="alert alert-info">読み込み中...</div> : null}
         <div className="overflow-x-auto">
           <table className="table table-zebra">
-            <thead><tr><th>作品番号</th><th>作品名</th><th>一次平均</th><th>私の採点</th><th>ステータス</th><th>ボタン</th></tr></thead>
+            <thead><tr><th>作品番号</th><th>作品名</th><th>一次平均</th><th>審査員平均</th><th>私の採点</th><th>ステータス</th><th>ボタン</th></tr></thead>
             <tbody>
               {sortedEntries.map((entry) => (
                 <tr key={entry.entry_id}>
@@ -129,6 +129,7 @@ export default function StaffReviewList() {
                     </div>
                   </td>
                   <td>{entry.primary_review_count ? `${entry.primary_avg_score}(${entry.primary_review_count})` : '-'}</td>
+                  <td>{entry.final_avg_score ? entry.final_avg_score : '-'}</td>
                   <td>{entry.own_total_score ?? '-'}</td>
                   <td>{entry.status || '未提出'}</td>
                   <td><Link className="btn btn-sm btn-primary" href={`/staff/reviews/${entry.entry_id}`}>審査</Link></td>
