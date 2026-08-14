@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase/client'
 
 type Contest = { contest_id: number; title: string; year: number; status: string }
-type Entry = { entry_id: number; work_id: string; work_number: number; status: string; own_total_score?: number | null; works?: { title?: string; thumbnail_url?: string | null } }
+type Entry = { entry_id: number; work_id: string; work_number: number; status: string; primary_avg_score?: number; primary_review_count?: number; own_total_score?: number | null; works?: { title?: string; thumbnail_url?: string | null } }
 
 export default function StaffReviewList() {
   const [contests, setContests] = useState<Contest[]>([])
@@ -14,7 +14,8 @@ export default function StaffReviewList() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [status, setStatus] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sortKey, setSortKey] = useState<'work_number' | 'total_score'>('work_number')
+  const [sortKey, setSortKey] = useState<'work_number' | 'primary_average' | 'total_score'>('work_number')
+  const [sortReady, setSortReady] = useState(false)
 
   async function loadContests() {
     const res = await fetch('/api/contests')
@@ -64,7 +65,26 @@ export default function StaffReviewList() {
     return () => window.clearTimeout(timerId)
   }, [contestId, loadEntries])
 
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      const savedSortKey = window.localStorage.getItem('staff-review-sort-key')
+      if (savedSortKey === 'work_number' || savedSortKey === 'primary_average' || savedSortKey === 'total_score') {
+        setSortKey(savedSortKey)
+      }
+      setSortReady(true)
+    }, 0)
+    return () => window.clearTimeout(timerId)
+  }, [])
+
+  useEffect(() => {
+    if (!sortReady) return
+    window.localStorage.setItem('staff-review-sort-key', sortKey)
+  }, [sortKey, sortReady])
+
   const sortedEntries = [...entries].sort((left, right) => {
+    if (sortKey === 'primary_average') {
+      return (right.primary_avg_score ?? -1) - (left.primary_avg_score ?? -1) || left.work_number - right.work_number
+    }
     if (sortKey === 'total_score') {
       const leftScore = left.own_total_score ?? -1
       const rightScore = right.own_total_score ?? -1
@@ -83,17 +103,21 @@ export default function StaffReviewList() {
               <option value="">コンテストを選択</option>
               {contests.map((contest) => <option key={contest.contest_id} value={contest.contest_id}>[{contest.year}] {contest.title}</option>)}
             </select>
-            <select className="select select-bordered" value={sortKey} onChange={(e) => setSortKey(e.target.value as 'work_number' | 'total_score')}>
+            <select className="select select-bordered" value={sortKey} onChange={(e) => setSortKey(e.target.value as 'work_number' | 'primary_average' | 'total_score')}>
               <option value="work_number">作品番号順</option>
-              <option value="total_score">合計点順</option>
+              <option value="primary_average">一次平均順</option>
+              <option value="total_score">私の採点順</option>
             </select>
+            <button className="btn btn-outline" type="button" onClick={() => contestId && void loadEntries(contestId)} disabled={loading || !contestId}>
+              更新
+            </button>
           </div>
         </div>
 
         {loading ? <div className="alert alert-info">読み込み中...</div> : null}
         <div className="overflow-x-auto">
           <table className="table table-zebra">
-            <thead><tr><th>作品番号</th><th>作品名</th><th>合計点</th><th>ステータス</th><th>ボタン</th></tr></thead>
+            <thead><tr><th>作品番号</th><th>作品名</th><th>一次平均</th><th>私の採点</th><th>ステータス</th><th>ボタン</th></tr></thead>
             <tbody>
               {sortedEntries.map((entry) => (
                 <tr key={entry.entry_id}>
@@ -104,6 +128,7 @@ export default function StaffReviewList() {
                       <span>{entry.works?.title || '無題'}</span>
                     </div>
                   </td>
+                  <td>{entry.primary_review_count ? `${entry.primary_avg_score}(${entry.primary_review_count})` : '-'}</td>
                   <td>{entry.own_total_score ?? '-'}</td>
                   <td>{entry.status || '未提出'}</td>
                   <td><Link className="btn btn-sm btn-primary" href={`/staff/reviews/${entry.entry_id}`}>審査</Link></td>

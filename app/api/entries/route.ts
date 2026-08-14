@@ -43,9 +43,11 @@ async function nextContestWorkNumber(contestId: number) {
 }
 
 async function buildEntryScoreMap(entryIds: number[]) {
-  if (entryIds.length === 0) return { primary: {}, final: {} } as {
+  if (entryIds.length === 0) return { primary: {}, final: {}, primaryCount: {}, finalCount: {} } as {
     primary: Record<number, number>
     final: Record<number, number>
+    primaryCount: Record<number, number>
+    finalCount: Record<number, number>
   }
 
   const { data, error } = await supabaseAdmin
@@ -72,12 +74,18 @@ async function buildEntryScoreMap(entryIds: number[]) {
 
   const primary: Record<number, number> = {}
   const final: Record<number, number> = {}
+  const primaryCount: Record<number, number> = {}
+  const finalCount: Record<number, number> = {}
   for (const entryId of entryIds) {
-    primary[entryId] = averageOf(grouped.primary[entryId] || [])
-    final[entryId] = averageOf(grouped.final[entryId] || [])
+    const primaryScores = grouped.primary[entryId] || []
+    const finalScores = grouped.final[entryId] || []
+    primary[entryId] = averageOf(primaryScores)
+    final[entryId] = averageOf(finalScores)
+    primaryCount[entryId] = primaryScores.length
+    finalCount[entryId] = finalScores.length
   }
 
-  return { primary, final }
+  return { primary, final, primaryCount, finalCount }
 }
 
 export async function GET(req: Request) {
@@ -128,6 +136,8 @@ export async function GET(req: Request) {
       ...entry,
       primary_avg_score: scoreMap.primary[entry.entry_id] || 0,
       final_avg_score: scoreMap.final[entry.entry_id] || 0,
+      primary_review_count: scoreMap.primaryCount[entry.entry_id] || 0,
+      final_review_count: scoreMap.finalCount[entry.entry_id] || 0,
       own_total_score: ownEvaluationMap.get(entry.entry_id)?.total_score ?? null,
       own_evaluation_status: ownEvaluationMap.get(entry.entry_id)?.status ?? 'unexamined',
     }))
