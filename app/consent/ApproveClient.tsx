@@ -80,7 +80,7 @@ export default function ApproveClient({ token, initialStatus, initialData }: { t
 
       <div className="grid grid-cols-1 gap-3">
         <label className="form-control">
-          <div className="label"><span className="label-text">お子様の名前</span></div>
+          <div className="label"><span className="label-text">お子様の氏名（フルネーム）</span></div>
           <input className="input input-bordered" value={name} onChange={(e) => setName(e.target.value)} required />
         </label>
 
