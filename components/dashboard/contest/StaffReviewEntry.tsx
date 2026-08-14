@@ -19,7 +19,7 @@ function renderMarkdown(value: string): ReactNode[] {
   })
 }
 
-export default function StaffReviewEntry({ entryId }: { entryId: string }) {
+export default function StaffReviewEntry({ entryId, phase = 'primary' }: { entryId: string; phase?: 'primary' | 'final' }) {
   const router = useRouter()
   const [entry, setEntry] = useState<Entry | null>(null)
   const [scoreOriginality, setScoreOriginality] = useState('3')
@@ -29,6 +29,7 @@ export default function StaffReviewEntry({ entryId }: { entryId: string }) {
   const [scoreOther, setScoreOther] = useState('3.0')
   const [publicComment, setPublicComment] = useState('')
   const [privateComment, setPrivateComment] = useState('')
+  const [hasSavedEvaluation, setHasSavedEvaluation] = useState(false)
   const [status, setStatus] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -46,10 +47,11 @@ export default function StaffReviewEntry({ entryId }: { entryId: string }) {
       }
       setEntry(data.entries[0])
 
-      const evaluationRes = await fetch(`/api/evaluations?entry_id=${entryId}&phase=primary&mine=1`, { headers, cache: 'no-store' })
+      const evaluationRes = await fetch(`/api/evaluations?entry_id=${entryId}&phase=${phase}&mine=1`, { headers, cache: 'no-store' })
       const evaluationData = await evaluationRes.json()
       const evaluation = evaluationData.evaluations?.[0]
       if (evaluationRes.ok && evaluation) {
+        setHasSavedEvaluation(true)
         setScoreOriginality(String(evaluation.score_originality ?? 3))
         setScoreSkill(String(evaluation.score_skill ?? 3))
         setScoreEffort(String(evaluation.score_effort ?? 3))
@@ -59,7 +61,7 @@ export default function StaffReviewEntry({ entryId }: { entryId: string }) {
         setPrivateComment(evaluation.private_comment || '')
       }
     })()
-  }, [entryId])
+  }, [entryId, phase])
 
   async function save() {
     setSaving(true)
@@ -72,7 +74,7 @@ export default function StaffReviewEntry({ entryId }: { entryId: string }) {
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
           entry_id: Number(entryId),
-          phase: 'primary',
+          phase,
           score_originality: Number(scoreOriginality),
           score_skill: Number(scoreSkill),
           score_effort: Number(scoreEffort),
@@ -88,9 +90,44 @@ export default function StaffReviewEntry({ entryId }: { entryId: string }) {
         setStatus(`保存に失敗しました: ${data?.error || res.status}`)
         return
       }
-      router.push('/staff')
+      router.push(phase === 'final' ? '/judge' : '/staff')
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : '保存に失敗しました')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function deleteEvaluation() {
+    const confirmed = window.confirm('自分の採点とコメントを削除します。よろしいですか？')
+    if (!confirmed) return
+
+    setSaving(true)
+    setStatus('採点を削除中...')
+    try {
+      const session = await supabase.auth.getSession()
+      const token = session.data.session?.access_token
+      const res = await fetch('/api/evaluations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ entry_id: Number(entryId), phase }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setStatus(`削除に失敗しました: ${data?.error || res.status}`)
+        return
+      }
+      setScoreOriginality('3')
+      setScoreSkill('3')
+      setScoreEffort('3')
+      setScorePurpose('3')
+      setScoreOther('3.0')
+      setPublicComment('')
+      setPrivateComment('')
+      setHasSavedEvaluation(false)
+      router.push(phase === 'final' ? '/judge' : '/staff')
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : '削除に失敗しました')
     } finally {
       setSaving(false)
     }
@@ -102,7 +139,7 @@ export default function StaffReviewEntry({ entryId }: { entryId: string }) {
       <div className="mx-auto max-w-6xl">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">審査</h1>
-          <Link className="btn btn-ghost" href="/staff">一覧へ戻る</Link>
+          <Link className="btn btn-ghost" href={phase === 'final' ? '/judge' : '/staff'}>一覧へ戻る</Link>
         </div>
         {status && !entry ? <div className="alert alert-error">{status}</div> : null}
         {work ? (
@@ -110,7 +147,7 @@ export default function StaffReviewEntry({ entryId }: { entryId: string }) {
             <article className="card bg-base-100 border border-base-200 shadow-md">
               <div className="card-body gap-5">
                 <h2 className="text-3xl font-bold">{work.title || '無題'}</h2>
-                {work.thumbnail_url ? <Image src={work.thumbnail_url} alt="作品サムネイル" width={1200} height={800} unoptimized className="max-h-80 w-full rounded-box bg-base-200 object-contain" /> : null}
+                {work.thumbnail_url ? <Image src={work.thumbnail_url} alt="作品サムネイル" width={1200} height={800} unoptimized loading="eager" className="max-h-80 w-full rounded-box bg-base-200 object-contain" /> : null}
                 {work.video_location ? (work.video_type === 'mp4_file' ? <video src={work.video_location} controls className="max-h-96 w-full rounded-box bg-black" /> : <a className="link link-primary break-all" href={work.video_location} target="_blank" rel="noreferrer">動画を見る</a>) : null}
                 {work.short_description ? <p className="text-xl font-semibold">{work.short_description}</p> : null}
                 {work.work_url ? <a className="link link-primary break-all" href={work.work_url} target="_blank" rel="noreferrer">{work.work_url}</a> : null}
@@ -138,7 +175,10 @@ export default function StaffReviewEntry({ entryId }: { entryId: string }) {
                   <span className="label-text">非公開コメント（評価メモ）</span>
                   <textarea className="textarea textarea-bordered min-h-24" value={privateComment} onChange={(e) => setPrivateComment(e.target.value)} placeholder="審査用のメモ" />
                 </label>
-                <button className="btn btn-primary" type="button" onClick={() => void save()} disabled={saving}>{saving ? '保存中...' : '保存'}</button>
+                <div className="flex flex-wrap gap-2">
+                  <button className="btn btn-primary" type="button" onClick={() => void save()} disabled={saving}>{saving ? '保存中...' : '保存'}</button>
+                  {hasSavedEvaluation ? <button className="btn btn-outline btn-error" type="button" onClick={() => void deleteEvaluation()} disabled={saving}>自分の採点を削除</button> : null}
+                </div>
                 {status ? <div className="alert alert-info text-sm">{status}</div> : null}
               </div>
             </aside>

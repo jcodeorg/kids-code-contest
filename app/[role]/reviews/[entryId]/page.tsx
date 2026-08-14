@@ -17,5 +17,5 @@ export default async function StaffReviewEntryPage({ params }: { params: Promise
     await switchActiveRoleByIdentity({ userId: data.user.id, email: data.user.email || undefined, roleId: requestedRole })
   }
 
-  return <StaffReviewEntry entryId={entryId} />
+  return <StaffReviewEntry entryId={entryId} phase={requestedRole === 'judge' ? 'final' : 'primary'} />
 }

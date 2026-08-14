@@ -6,9 +6,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase/client'
 
 type Contest = { contest_id: number; title: string; year: number; status: string }
-type Entry = { entry_id: number; work_id: string; work_number: number; status: string; primary_avg_score?: number; primary_review_count?: number; final_avg_score?: number; own_total_score?: number | null; works?: { title?: string; thumbnail_url?: string | null } }
+type Entry = { entry_id: number; work_id: string; work_number: number; status: string; primary_avg_score?: number; primary_review_count?: number; final_avg_score?: number; final_review_count?: number; own_total_score?: number | null; works?: { title?: string; thumbnail_url?: string | null } }
 
-export default function StaffReviewList() {
+export default function StaffReviewList({ phase = 'primary', basePath = '/staff', title = '私の審査' }: { phase?: 'primary' | 'final'; basePath?: string; title?: string }) {
   const [contests, setContests] = useState<Contest[]>([])
   const [contestId, setContestId] = useState<number | null>(null)
   const [entries, setEntries] = useState<Entry[]>([])
@@ -16,6 +16,7 @@ export default function StaffReviewList() {
   const [loading, setLoading] = useState(false)
   const [sortKey, setSortKey] = useState<'work_number' | 'primary_average' | 'total_score'>('work_number')
   const [sortReady, setSortReady] = useState(false)
+  const sortStorageKey = `review-sort-key-${phase}`
 
   async function loadContests() {
     const res = await fetch('/api/contests')
@@ -67,19 +68,19 @@ export default function StaffReviewList() {
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
-      const savedSortKey = window.localStorage.getItem('staff-review-sort-key')
+      const savedSortKey = window.localStorage.getItem(sortStorageKey)
       if (savedSortKey === 'work_number' || savedSortKey === 'primary_average' || savedSortKey === 'total_score') {
         setSortKey(savedSortKey)
       }
       setSortReady(true)
     }, 0)
     return () => window.clearTimeout(timerId)
-  }, [])
+  }, [sortStorageKey])
 
   useEffect(() => {
     if (!sortReady) return
-    window.localStorage.setItem('staff-review-sort-key', sortKey)
-  }, [sortKey, sortReady])
+    window.localStorage.setItem(sortStorageKey, sortKey)
+  }, [sortKey, sortReady, sortStorageKey])
 
   const sortedEntries = [...entries].sort((left, right) => {
     if (sortKey === 'primary_average') {
@@ -97,7 +98,7 @@ export default function StaffReviewList() {
     <section className="card bg-base-100 shadow-md border border-base-200">
       <div className="card-body gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="card-title">私の審査</h2>
+          <h2 className="card-title">{title}</h2>
           <div className="flex flex-wrap gap-2">
             <select className="select select-bordered" value={contestId ?? ''} onChange={(e) => setContestId(e.target.value ? Number(e.target.value) : null)}>
               <option value="">コンテストを選択</option>
@@ -129,10 +130,10 @@ export default function StaffReviewList() {
                     </div>
                   </td>
                   <td>{entry.primary_review_count ? `${entry.primary_avg_score}(${entry.primary_review_count})` : '-'}</td>
-                  <td>{entry.final_avg_score ? entry.final_avg_score : '-'}</td>
+                  <td>{entry.final_review_count ? `${entry.final_avg_score}(${entry.final_review_count})` : '-'}</td>
                   <td>{entry.own_total_score ?? '-'}</td>
                   <td>{entry.status || '未提出'}</td>
-                  <td><Link className="btn btn-sm btn-primary" href={`/staff/reviews/${entry.entry_id}`}>審査</Link></td>
+                  <td><Link className="btn btn-sm btn-primary" href={`${basePath}/reviews/${entry.entry_id}`}>審査</Link></td>
                 </tr>
               ))}
             </tbody>

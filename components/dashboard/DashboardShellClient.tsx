@@ -77,7 +77,7 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
       { title: '一次集計', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><h3 className="card-title text-lg">一次集計</h3><p className="text-base-content/70">通過予定人数・平均点・審査の偏りを見て集計を調整します。</p></div></div> },
     ],
     judge: [
-      { title: '私の審査', content: <ReviewPanel phase="final" roleLabel="私の審査" /> },
+      { title: '私の審査', content: <StaffReviewList phase="final" basePath="/judge" title="私の審査" /> },
       { title: '上位作品一覧', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><h3 className="card-title text-lg">上位作品一覧</h3><p className="text-base-content/70">一次通過作品の中から、最終審査対象の上位候補を確認します。</p></div></div> },
       { title: '二次集計', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><h3 className="card-title text-lg">二次集計</h3><p className="text-base-content/70">最終評価の平均点と順位の整合性を確認します。</p></div></div> },
     ],

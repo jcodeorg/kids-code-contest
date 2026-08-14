@@ -133,3 +133,37 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const auth = await requireAuthWithRoles(req)
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+    const body = await req.json()
+    const entryId = Number(body?.entry_id)
+    const phase = typeof body?.phase === 'string' ? body.phase : ''
+
+    if (!Number.isInteger(entryId) || entryId <= 0 || (phase !== 'primary' && phase !== 'final')) {
+      return NextResponse.json({ error: 'entry_id and valid phase are required' }, { status: 400 })
+    }
+
+    if (phase === 'primary' && !PRIMARY_ROLES.includes(auth.identity.currentRoleId as RoleId)) {
+      return NextResponse.json({ error: 'primary evaluation role required' }, { status: 403 })
+    }
+    if (phase === 'final' && !FINAL_ROLES.includes(auth.identity.currentRoleId as RoleId)) {
+      return NextResponse.json({ error: 'final evaluation role required' }, { status: 403 })
+    }
+
+    const { error } = await supabaseAdmin
+      .from('evaluations')
+      .delete()
+      .eq('entry_id', entryId)
+      .eq('evaluator_id', auth.identity.userId)
+      .eq('phase', phase)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorToMessage(err) }, { status: 500 })
+  }
+}
