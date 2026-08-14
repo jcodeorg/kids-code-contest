@@ -113,11 +113,23 @@ export async function GET(req: Request) {
     const entries = (data || []) as ContestEntryRow[]
     const entryIds = entries.map((e) => e.entry_id)
     const scoreMap = await buildEntryScoreMap(entryIds)
+    const reviewPhase = auth.identity.currentRoleId === 'judge' ? 'final' : 'primary'
+    const { data: ownEvaluations, error: ownEvaluationsErr } = await supabaseAdmin
+      .from('evaluations')
+      .select('entry_id,total_score,status')
+      .eq('evaluator_id', auth.identity.userId)
+      .eq('phase', reviewPhase)
+      .in('entry_id', entryIds.length > 0 ? entryIds : [-1])
+
+    if (ownEvaluationsErr) return NextResponse.json({ error: ownEvaluationsErr.message }, { status: 500 })
+    const ownEvaluationMap = new Map((ownEvaluations || []).map((evaluation) => [evaluation.entry_id, evaluation]))
 
     const response = entries.map((entry) => ({
       ...entry,
       primary_avg_score: scoreMap.primary[entry.entry_id] || 0,
       final_avg_score: scoreMap.final[entry.entry_id] || 0,
+      own_total_score: ownEvaluationMap.get(entry.entry_id)?.total_score ?? null,
+      own_evaluation_status: ownEvaluationMap.get(entry.entry_id)?.status ?? 'unexamined',
     }))
 
     return NextResponse.json({ entries: response })

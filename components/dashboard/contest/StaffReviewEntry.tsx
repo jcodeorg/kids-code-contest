@@ -38,13 +38,26 @@ export default function StaffReviewEntry({ entryId }: { entryId: string }) {
       const token = session.data.session?.access_token
       const headers: Record<string, string> = {}
       if (token) headers.Authorization = `Bearer ${token}`
-      const res = await fetch(`/api/entries?entry_id=${entryId}`, { headers })
+      const res = await fetch(`/api/entries?entry_id=${entryId}`, { headers, cache: 'no-store' })
       const data = await res.json()
       if (!res.ok || !data.entries?.[0]) {
         setStatus(data?.error || '作品を取得できませんでした')
         return
       }
       setEntry(data.entries[0])
+
+      const evaluationRes = await fetch(`/api/evaluations?entry_id=${entryId}&phase=primary&mine=1`, { headers, cache: 'no-store' })
+      const evaluationData = await evaluationRes.json()
+      const evaluation = evaluationData.evaluations?.[0]
+      if (evaluationRes.ok && evaluation) {
+        setScoreOriginality(String(evaluation.score_originality ?? 3))
+        setScoreSkill(String(evaluation.score_skill ?? 3))
+        setScoreEffort(String(evaluation.score_effort ?? 3))
+        setScorePurpose(String(evaluation.score_purpose ?? 3))
+        setScoreOther(String(evaluation.score_other ?? 3.0))
+        setPublicComment(evaluation.public_comment || '')
+        setPrivateComment(evaluation.private_comment || '')
+      }
     })()
   }, [entryId])
 

@@ -27,6 +27,7 @@ export async function GET(req: Request) {
     const entryId = Number(url.searchParams.get('entry_id') || '')
     const contestId = Number(url.searchParams.get('contest_id') || '')
     const phase = url.searchParams.get('phase') || ''
+    const mine = url.searchParams.get('mine') === '1'
 
     let query = supabaseAdmin
       .from('evaluations')
@@ -36,6 +37,7 @@ export async function GET(req: Request) {
     if (!Number.isNaN(entryId) && entryId > 0) query = query.eq('entry_id', entryId)
     if (!Number.isNaN(contestId) && contestId > 0) query = query.eq('contest_entries.contest_id', contestId)
     if (phase) query = query.eq('phase', phase)
+    if (mine) query = query.eq('evaluator_id', auth.identity.userId)
 
     if (auth.identity.currentRoleId === 'applicant') {
       query = query.eq('contest_entries.user_id', auth.identity.userId).eq('is_comment_published', true)
