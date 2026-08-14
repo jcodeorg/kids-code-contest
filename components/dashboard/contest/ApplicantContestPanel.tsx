@@ -1,6 +1,8 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
+import { Cat, Cpu, Ellipsis, Code2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase/client'
 
@@ -10,6 +12,7 @@ type Work = {
   category: string
   short_description: string
   work_url: string
+  thumbnail_url?: string | null
 }
 
 type Contest = {
@@ -34,6 +37,22 @@ type Entry = {
   status: string
   contests?: { title?: string; year?: number }
   works?: { title?: string }
+}
+
+function CategoryIcon({ category }: { category: string }) {
+  const iconProps = { size: 20, strokeWidth: 2, 'aria-hidden': true as const }
+
+  if (category === 'scratch') return <Cat {...iconProps} />
+  if (category === 'microbit') return <Cpu {...iconProps} />
+  if (category === 'python') return <Code2 {...iconProps} />
+  return <Ellipsis {...iconProps} />
+}
+
+function categoryLabel(category: string) {
+  if (category === 'scratch') return 'スクラッチ'
+  if (category === 'microbit') return 'マイクロビット'
+  if (category === 'python') return 'Python'
+  return 'その他'
 }
 
 export default function ApplicantContestPanel({ contests, selectedContestId, onSelectedContestIdChange, onEntryChanged }: ApplicantContestPanelProps) {
@@ -167,8 +186,6 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
     }
   }
 
-  const selectedContestName = selectedContestId ? contests.find((contest) => contest.contest_id === selectedContestId)?.title || '選択中のコンテスト' : '未選択'
-
   return (
     <div className="space-y-6">
       <section className="card bg-base-100 shadow-md border border-base-200">
@@ -180,7 +197,7 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
 
           <div className="overflow-x-auto">
             <table className="table table-zebra">
-              <thead><tr><th>さくひん名</th><th>しゅるい</th><th>ステータス</th><th>ボタン</th></tr></thead>
+              <thead><tr><th>さくひん名</th><th>ステータス</th><th>ボタン</th></tr></thead>
               <tbody>
                 {works.map((w) => {
                   const selectedContestEntry = selectedContestId ? entries.find((entry) => entry.contest_id === selectedContestId) : undefined
@@ -192,11 +209,35 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
                   return (
                     <tr key={w.work_id}>
                       <td>
-                        {isCurrentEntry && Number.isFinite(selectedContestEntry?.work_number)
-                          ? `[#${selectedContestEntry.work_number}]${w.title}`
-                          : w.title}
+                        <div className="flex items-center gap-3 min-w-52">
+                          {w.thumbnail_url ? (
+                            <Image
+                              src={w.thumbnail_url}
+                              alt=""
+                              width={64}
+                              height={48}
+                              unoptimized
+                              className="h-12 w-16 shrink-0 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded bg-base-200 text-xs text-base-content/50">
+                              画像なし
+                            </div>
+                          )}
+                          <span
+                            className="inline-flex shrink-0 items-center justify-center rounded-box bg-base-200 p-2"
+                            title={categoryLabel(w.category)}
+                            aria-label={categoryLabel(w.category)}
+                          >
+                            <CategoryIcon category={w.category} />
+                          </span>
+                          <span>
+                            {isCurrentEntry && Number.isFinite(selectedContestEntry?.work_number)
+                              ? `[#${selectedContestEntry.work_number}]${w.title}`
+                              : w.title}
+                          </span>
+                        </div>
                       </td>
-                      <td>{w.category}</td>
                       <td>{statusLabel}</td>
                       <td className="flex flex-wrap gap-2">
                         {isCurrentEntry ? (
