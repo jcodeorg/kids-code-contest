@@ -80,7 +80,7 @@ export default async function Page({ searchParams }: Props) {
             <p className="mt-4 font-semibold">2. 第三者提供</p>
             <p className="mt-2">北区教育委員会および北区立小中学校へ、以下を提供します。</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>氏名、学校名、学年</li>
+              <li>氏名、学校名、学年、作品情報</li>
               <li>コンテスト時の写真・動画</li>
             </ul>
             <p className="mt-2">提供先でも上記目的の範囲で利用します。</p>

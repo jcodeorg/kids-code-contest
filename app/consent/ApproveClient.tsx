@@ -36,11 +36,11 @@ export default function ApproveClient({ token, initialStatus, initialData }: { t
   }
 
   async function approve() {
-    if (!guardianName.trim() || !guardianPhone.trim()) {
-      setMessage('保護者氏名と電話番号を入力してください')
+    if (!name.trim() || !nameKana.trim() || !schoolName.trim() || !grade.trim() || !guardianEmail.trim() || !guardianName.trim() || !guardianPhone.trim()) {
+      setMessage('すべての項目を入力してください')
       return
     }
-    if (guardianEmail && !isValidEmail(guardianEmail)) {
+    if (!isValidEmail(guardianEmail)) {
       setMessage('保護者メールの書き方を確認してください')
       return
     }
@@ -81,22 +81,22 @@ export default function ApproveClient({ token, initialStatus, initialData }: { t
       <div className="grid grid-cols-1 gap-3">
         <label className="form-control">
           <div className="label"><span className="label-text">お子様の名前</span></div>
-          <input className="input input-bordered" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="input input-bordered" value={name} onChange={(e) => setName(e.target.value)} required />
         </label>
 
         <label className="form-control">
           <div className="label"><span className="label-text">ふりがな</span></div>
-          <input className="input input-bordered" value={nameKana} onChange={(e) => setNameKana(e.target.value)} />
+          <input className="input input-bordered" value={nameKana} onChange={(e) => setNameKana(e.target.value)} required />
         </label>
 
         <label className="form-control">
           <div className="label"><span className="label-text">学校名</span></div>
-          <input className="input input-bordered" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} />
+          <input className="input input-bordered" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} required />
         </label>
 
         <label className="form-control">
           <div className="label"><span className="label-text">学年</span></div>
-          <select className="select select-bordered" value={grade} onChange={(e) => setGrade(e.target.value)}>
+          <select className="select select-bordered" value={grade} onChange={(e) => setGrade(e.target.value)} required>
             <option value="">えらんでください</option>
             <option value="小1">小1</option>
             <option value="小2">小2</option>
@@ -122,7 +122,7 @@ export default function ApproveClient({ token, initialStatus, initialData }: { t
 
         <label className="form-control">
           <div className="label"><span className="label-text">保護者メール</span></div>
-          <input className="input input-bordered" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} />
+          <input className="input input-bordered" type="email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} required />
         </label>
       </div>
 
