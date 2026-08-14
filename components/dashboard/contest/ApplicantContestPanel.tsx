@@ -254,6 +254,7 @@ export default function ApplicantContestPanel({ contests, selectedContestId, onS
                           </button>
                         )}
                         <Link className="btn btn-sm btn-outline" href={`/applicant/works/${w.work_id}`}>へんしゅう</Link>
+                        <Link className="btn btn-sm btn-secondary" href={`/applicant/works/${w.work_id}/preview`}>プレビュー</Link>
                       </td>
                     </tr>
                   )
