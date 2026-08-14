@@ -35,7 +35,8 @@ export async function POST(req: Request) {
 
     const body = await req.json()
     const title = typeof body?.title === 'string' ? body.title.trim() : ''
-    const category = typeof body?.category === 'string' ? body.category.trim() : ''
+    const requestedCategory = typeof body?.category === 'string' ? body.category.trim() : ''
+    const category = isValidCategory(requestedCategory) ? requestedCategory : 'scratch'
     const shortDescription = typeof body?.short_description === 'string' ? body.short_description.trim() : ''
     const detailedDescription = typeof body?.detailed_description === 'string' ? body.detailed_description.trim() : ''
     const workUrl = typeof body?.work_url === 'string' ? body.work_url.trim() : ''
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
     const thumbnailUrl = typeof body?.thumbnail_url === 'string' ? body.thumbnail_url.trim() : ''
     const hasHardware = Boolean(body?.has_hardware)
 
-    if (!title || !isValidCategory(category) || !shortDescription || !detailedDescription || !workUrl || !videoType || !videoLocation) {
+    if (!title) {
       return NextResponse.json({ error: 'required fields are missing' }, { status: 400 })
     }
 
@@ -88,11 +89,11 @@ export async function PUT(req: Request) {
     const updates: Record<string, unknown> = {}
     if (typeof body?.title === 'string' && body.title.trim()) updates.title = body.title.trim()
     if (typeof body?.category === 'string' && isValidCategory(body.category.trim())) updates.category = body.category.trim()
-    if (typeof body?.short_description === 'string' && body.short_description.trim()) updates.short_description = body.short_description.trim()
-    if (typeof body?.detailed_description === 'string' && body.detailed_description.trim()) updates.detailed_description = body.detailed_description.trim()
-    if (typeof body?.work_url === 'string' && body.work_url.trim()) updates.work_url = body.work_url.trim()
-    if (typeof body?.video_type === 'string' && body.video_type.trim()) updates.video_type = body.video_type.trim()
-    if (typeof body?.video_location === 'string' && body.video_location.trim()) updates.video_location = body.video_location.trim()
+    if (typeof body?.short_description === 'string') updates.short_description = body.short_description.trim()
+    if (typeof body?.detailed_description === 'string') updates.detailed_description = body.detailed_description.trim()
+    if (typeof body?.work_url === 'string') updates.work_url = body.work_url.trim()
+    if (body?.video_type === 'youtube_url' || body?.video_type === 'mp4_file') updates.video_type = body.video_type
+    if (typeof body?.video_location === 'string') updates.video_location = body.video_location.trim()
     if (typeof body?.thumbnail_url === 'string') updates.thumbnail_url = body.thumbnail_url.trim()
     if (typeof body?.has_hardware === 'boolean') updates.has_hardware = body.has_hardware
 

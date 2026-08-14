@@ -103,12 +103,17 @@ export default function WorkForm({
 
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false)
   const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [thumbnailFileName, setThumbnailFileName] = useState('')
+  const [videoFileName, setVideoFileName] = useState('')
 
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState('')
   const detailedTextRef = useRef<HTMLTextAreaElement | null>(null)
   const easyMdeRef = useRef<EasyMDE | null>(null)
   const initialDetailedDescriptionRef = useRef(detailedDescription)
+  const pendingUploadedUrlsRef = useRef(new Set<string>())
+  const discardedUploadedUrlsRef = useRef(new Set<string>())
+  const pendingDeletedUrlsRef = useRef(new Set<string>())
 
   async function buildAuthHeaders() {
     const session = await supabase.auth.getSession()
@@ -172,17 +177,8 @@ export default function WorkForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const detailedDescriptionValue = (easyMdeRef.current?.value() || detailedDescription).trim()
-    if (!detailedDescriptionValue) {
-      setStatus('ながい せつめいを入力してください')
-      return
-    }
-
     const resolvedVideoLocation =
       videoType === 'mp4_file' ? (videoFileUrl || videoLocation).trim() : videoLocation.trim()
-    if (!resolvedVideoLocation) {
-      setStatus('動画URLまたは動画ファイルを設定してください')
-      return
-    }
 
     setSaving(true)
     setStatus('保存中...')
@@ -204,6 +200,7 @@ export default function WorkForm({
         setStatus(res.error || '保存に失敗しました')
         return
       }
+      await finalizePendingFileChanges()
       setStatus('保存しました')
       onSuccess?.()
     } catch (err: unknown) {
@@ -252,18 +249,59 @@ export default function WorkForm({
     if (!res.ok) throw new Error(data?.error || 'delete failed')
   }
 
+  function trackUpload(url: string, previousUrl: string) {
+    pendingUploadedUrlsRef.current.add(url)
+    if (previousUrl && previousUrl !== url) {
+      if (pendingUploadedUrlsRef.current.has(previousUrl)) {
+        discardedUploadedUrlsRef.current.add(previousUrl)
+      } else {
+        pendingDeletedUrlsRef.current.add(previousUrl)
+      }
+    }
+  }
+
+  function trackDeletion(url: string) {
+    if (!url) return
+    if (pendingUploadedUrlsRef.current.has(url)) {
+      discardedUploadedUrlsRef.current.add(url)
+      return
+    }
+    pendingDeletedUrlsRef.current.add(url)
+  }
+
+  async function finalizePendingFileChanges() {
+    const urlsToDelete = Array.from(new Set([
+      ...pendingDeletedUrlsRef.current,
+      ...discardedUploadedUrlsRef.current,
+    ]))
+    await Promise.allSettled(urlsToDelete.map((url) => deleteUploadedByUrl(url)))
+    pendingUploadedUrlsRef.current.clear()
+    discardedUploadedUrlsRef.current.clear()
+    pendingDeletedUrlsRef.current.clear()
+  }
+
+  async function discardPendingFileChanges() {
+    const urlsToDelete = Array.from(new Set([
+      ...pendingUploadedUrlsRef.current,
+      ...discardedUploadedUrlsRef.current,
+    ]))
+    await Promise.allSettled(urlsToDelete.map((url) => deleteUploadedByUrl(url)))
+    pendingUploadedUrlsRef.current.clear()
+    discardedUploadedUrlsRef.current.clear()
+    pendingDeletedUrlsRef.current.clear()
+  }
+
   function handleThumbnailChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
     if (!f) return
+    setThumbnailFileName(f.name)
     void (async () => {
       try {
         const oldUrl = thumbnailUrl
         const uploaded = await uploadFile(f, 'thumbnail')
         if (uploaded?.url) {
           setThumbnailUrl(uploaded.url)
-          if (oldUrl && oldUrl !== uploaded.url) {
-            void deleteUploadedByUrl(oldUrl)
-          }
+          trackUpload(uploaded.url, oldUrl)
         }
       } catch (err: unknown) {
         setStatus(err instanceof Error ? err.message : 'サムネイルのアップロードに失敗しました')
@@ -274,6 +312,7 @@ export default function WorkForm({
   function handleVideoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
     if (!f) return
+    setVideoFileName(f.name)
     void (async () => {
       try {
         const oldUrl = videoFileUrl
@@ -282,9 +321,7 @@ export default function WorkForm({
           setVideoFileUrl(uploaded.url)
           setVideoType('mp4_file')
           setVideoLocation(uploaded.url)
-          if (oldUrl && oldUrl !== uploaded.url) {
-            void deleteUploadedByUrl(oldUrl)
-          }
+          trackUpload(uploaded.url, oldUrl)
         }
       } catch (err: unknown) {
         setStatus(err instanceof Error ? err.message : '動画のアップロードに失敗しました')
@@ -294,32 +331,29 @@ export default function WorkForm({
 
   function handleDeleteThumbnail() {
     if (!thumbnailUrl) return
-    void (async () => {
-      try {
-        await deleteUploadedByUrl(thumbnailUrl)
-      } catch {
-        // DB保存前のURLなど削除不可の可能性があるため、UI上の参照は消す。
-      }
-      setThumbnailUrl('')
-      setStatus('サムネイルを削除しました')
-    })()
+    trackDeletion(thumbnailUrl)
+    setThumbnailUrl('')
+    setThumbnailFileName('')
+    setStatus('サムネイルを削除しました')
   }
 
   function handleDeleteVideo() {
     if (!videoFileUrl) return
-    void (async () => {
-      try {
-        await deleteUploadedByUrl(videoFileUrl)
-      } catch {
-        // DB保存前のURLなど削除不可の可能性があるため、UI上の参照は消す。
-      }
-      setVideoFileUrl('')
-      if (videoType === 'mp4_file') setVideoLocation('')
-      setStatus('動画を削除しました')
-    })()
+    trackDeletion(videoFileUrl)
+    setVideoFileUrl('')
+    setVideoFileName('')
+    setVideoType('youtube_url')
+    setVideoLocation('')
+    setStatus('動画を削除しました')
+  }
+
+  async function handleCancel() {
+    await discardPendingFileChanges()
+    onCancel?.()
   }
 
   const videoPreviewUrl = videoFileUrl || (videoType === 'mp4_file' ? videoLocation : '')
+  const hasUploadedVideo = Boolean(videoFileUrl.trim())
 
   return (
     <div>
@@ -342,7 +376,7 @@ export default function WorkForm({
 
         <div>
           <label htmlFor="short-desc" className="block text-sm font-medium mb-1">みじかい せつめい</label>
-          <textarea id="short-desc" className="textarea textarea-bordered w-full" placeholder="みじかい せつめい" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} required />
+          <textarea id="short-desc" className="textarea textarea-bordered w-full" placeholder="みじかい せつめい" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} />
         </div>
 
         <div>
@@ -358,12 +392,18 @@ export default function WorkForm({
 
         <div>
           <label htmlFor="work-url" className="block text-sm font-medium mb-1">さくひんのURL</label>
-          <input id="work-url" className="input input-bordered w-full" placeholder="さくひんのURL" value={workUrl} onChange={(e) => setWorkUrl(e.target.value)} required />
+          <input id="work-url" className="input input-bordered w-full" placeholder="さくひんのURL" value={workUrl} onChange={(e) => setWorkUrl(e.target.value)} />
         </div>
 
         <div>
           <label htmlFor="thumbnail-file" className="block text-sm font-medium mb-1">がぞうファイル</label>
-          <input id="thumbnail-file" className="file-input file-input-bordered w-full" type="file" accept="image/*" onChange={handleThumbnailChange} />
+          <div className="flex flex-wrap items-center gap-3">
+            <input id="thumbnail-file" className="sr-only" type="file" accept="image/*" onChange={handleThumbnailChange} />
+            <label htmlFor="thumbnail-file" className="btn btn-primary cursor-pointer">ファイルを選択</label>
+            <span className="text-sm text-base-content/70">
+              {thumbnailFileName || (thumbnailUrl ? 'アップロード済み' : 'ファイルが選択されていません')}
+            </span>
+          </div>
           {uploadingThumbnail ? <div className="text-sm text-gray-500">アップロード中...</div> : null}
           {thumbnailUrl ? (
             <div className="mt-2 flex flex-col gap-2">
@@ -384,7 +424,13 @@ export default function WorkForm({
 
         <div>
           <label htmlFor="video-file" className="block text-sm font-medium mb-1">どうが ファイル (mp4)</label>
-          <input id="video-file" className="file-input file-input-bordered w-full" type="file" accept="video/*" onChange={handleVideoFileChange} />
+          <div className="flex flex-wrap items-center gap-3">
+            <input id="video-file" className="sr-only" type="file" accept="video/*" onChange={handleVideoFileChange} />
+            <label htmlFor="video-file" className="btn btn-primary cursor-pointer">ファイルを選択</label>
+            <span className="text-sm text-base-content/70">
+              {videoFileName || (videoFileUrl ? 'アップロード済み' : 'ファイルが選択されていません')}
+            </span>
+          </div>
           {uploadingVideo ? <div className="text-sm text-gray-500">アップロード中...</div> : null}
           {videoPreviewUrl ? (
             <div className="mt-2 flex flex-col gap-2">
@@ -398,20 +444,37 @@ export default function WorkForm({
 
         <div>
           <label htmlFor="video-type" className="block text-sm font-medium mb-1">動画タイプ</label>
-          <select id="video-type" className="select select-bordered w-full" value={videoType} onChange={(e) => setVideoType(e.target.value)}>
+          <select
+            id="video-type"
+            className="select select-bordered w-full"
+            value={videoType}
+            onChange={(e) => setVideoType(e.target.value)}
+            disabled={hasUploadedVideo}
+          >
             <option value="youtube_url">YouTube URL</option>
             <option value="mp4_file">MP4 ファイル</option>
           </select>
+          {hasUploadedVideo ? <div className="mt-1 text-xs text-gray-500">MP4動画を削除すると変更できます。</div> : null}
         </div>
 
         <div>
           <label htmlFor="video-location" className="block text-sm font-medium mb-1">動画URL / 保存先</label>
-          <input id="video-location" className="input input-bordered w-full" placeholder="動画URL / 保存先" value={videoLocation} onChange={(e) => setVideoLocation(e.target.value)} />
+          <input
+            id="video-location"
+            className="input input-bordered w-full"
+            placeholder="動画URL / 保存先"
+            value={videoLocation}
+            onChange={(e) => {
+              setVideoLocation(e.target.value)
+              setVideoType('youtube_url')
+            }}
+            disabled={hasUploadedVideo}
+          />
         </div>
 
         <div className="flex gap-2">
           <button className="btn btn-primary" disabled={saving} type="submit">{saving ? '保存中...' : submitLabel}</button>
-          <button type="button" className="btn btn-ghost" onClick={() => onCancel?.()}>{onCancel ? 'キャンセル' : 'もどる'}</button>
+          <button type="button" className="btn btn-ghost" onClick={() => void handleCancel()}>{onCancel ? 'キャンセル' : 'もどる'}</button>
         </div>
       </form>
 
