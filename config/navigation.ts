@@ -49,6 +49,7 @@ export const NAV_ITEMS: Record<string, NavItem[]> = {
   contest_admin: [
     { label: 'コンテスト管理', href: '/contest_admin' },
     { label: '応募一覧', href: '/contest_admin/entries' },
+    { label: '一次審査通過作品', href: '/contest_admin/selection' },
   ],
   admin: [
     { label: 'ユーザー管理', href: '/admin' },

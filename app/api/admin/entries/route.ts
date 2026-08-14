@@ -10,7 +10,7 @@ type AggregatedRow = {
 async function loadRanking(contestId: number, phase: 'primary' | 'final') {
   const { data: entries, error: entryErr } = await supabaseAdmin
     .from('contest_entries')
-    .select('entry_id,contest_id,work_number,is_primary_passed,works(title,category),users(name)')
+    .select('entry_id,contest_id,work_number,is_primary_passed,works(title,category,thumbnail_url),users(name)')
     .eq('contest_id', contestId)
     .order('work_number', { ascending: true })
 
@@ -108,17 +108,14 @@ export async function POST(req: Request) {
     }
 
     if (action === 'mark_primary_passed') {
-      const topN = Number(body?.top_n || 20)
-      const ranking = await loadRanking(contestId, 'primary')
-      const passIds = ranking
-        .slice()
-        .sort((a, b) => Number(b.avg_score || 0) - Number(a.avg_score || 0))
-        .slice(0, topN)
-        .map((r) => Number(r.entry_id))
+      const requestedIds = Array.isArray(body?.entry_ids)
+        ? body.entry_ids.map((id: unknown) => Number(id)).filter((id: number) => Number.isInteger(id) && id > 0)
+        : []
+      const passIds = Array.from(new Set(requestedIds))
 
       await supabaseAdmin.from('contest_entries').update({ is_primary_passed: false }).eq('contest_id', contestId)
       if (passIds.length > 0) {
-        await supabaseAdmin.from('contest_entries').update({ is_primary_passed: true }).in('entry_id', passIds)
+        await supabaseAdmin.from('contest_entries').update({ is_primary_passed: true }).eq('contest_id', contestId).in('entry_id', passIds)
       }
 
       return NextResponse.json({ ok: true, passed_entry_ids: passIds })
