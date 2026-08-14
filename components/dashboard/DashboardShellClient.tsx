@@ -6,6 +6,7 @@ import AdminPanel from './admin/AdminPanel'
 import ApplicantGuardianPanel from './ApplicantGuardianPanel'
 import ApplicantContestPanel from './contest/ApplicantContestPanel'
 import ReviewPanel from './contest/ReviewPanel'
+import StaffReviewList from './contest/StaffReviewList'
 import ContestAdminJudgingPanel from './contest/ContestAdminJudgingPanel'
 
 export default function DashboardShellClient({ paramsRole }: { paramsRole?: string }) {
@@ -61,12 +62,12 @@ export default function DashboardShellClient({ paramsRole }: { paramsRole?: stri
       { title: '作品ライブラリと応募', content: <ApplicantContestPanel contests={allContests} selectedContestId={selectedApplicantContestId} onSelectedContestIdChange={setSelectedApplicantContestId} onEntryChanged={handleApplicantEntryChanged} /> },
     ],
     staff: [
-      { title: '私の審査', content: <ReviewPanel phase="primary" roleLabel="私の審査" /> },
+      { title: '私の審査', content: <StaffReviewList /> },
       { title: '応募作品一覧', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><h3 className="card-title text-lg">応募作品一覧</h3><p className="text-base-content/70">一次審査対象の作品一覧を確認し、候補作品を絞り込みます。</p><ul className="list-disc pl-5 text-sm text-base-content/80 mt-3"><li>作品タイトル・学校名を確認</li><li>審査対象の候補を整理</li><li>一次通過候補を見極める</li></ul></div></div> },
       { title: '一次集計', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><h3 className="card-title text-lg">一次集計</h3><p className="text-base-content/70">審査平均・通過率・候補の偏りを確認して、最終審査の前提を整理します。</p></div></div> },
     ],
     staff_primary: [
-      { title: '私の審査', content: <ReviewPanel phase="primary" roleLabel="私の審査" /> },
+      { title: '私の審査', content: <StaffReviewList /> },
       { title: '応募作品一覧', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><h3 className="card-title text-lg">応募作品一覧</h3><p className="text-base-content/70">一次審査対象の作品一覧を確認し、候補作品を整理します。</p></div></div> },
       { title: '一次集計', content: <div className="card bg-base-100 shadow-md border border-base-200"><div className="card-body"><h3 className="card-title text-lg">一次集計</h3><p className="text-base-content/70">一次審査の評価状況と進捗を確認できます。</p></div></div> },
     ],
