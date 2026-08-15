@@ -73,7 +73,8 @@ export default function Home() {
         <div className="card-body gap-6">
           <div>
             <h1 className="card-title text-3xl">北区こどもプログラミングコンテスト</h1>
-            <p className="text-sm text-base-content/70 mt-2">安全なサインインで、応募・審査・運営の各ダッシュボードへアクセスできます。</p>
+            <p className="text-sm text-base-content/70 mt-2">北区こどもプログラミングコンテストの応募・審査サイトです。</p>
+            <p className="text-sm text-base-content/70 mt-2">本サイトのソースコードはこちら GitHub <a href="https://github.com/jcodeorg/kids-code-contest" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">https://github.com/jcodeorg/kids-code-contest</a></p>
           </div>
 
           {/* 未サインイン向けの画面は常に表示 */}
@@ -99,7 +100,7 @@ export default function Home() {
 
           <p className="text-sm text-base-content/80 mt-2">できるだけ「Google でサインイン」を使おう。そっちのほうがかんたんだよ。Googleを使えない人だけ、メールでサインインしてね。</p>
 
-          {signedIn || status ? <div className="alert alert-info text-sm">{status || 'サインイン中です。メニューからロール切替・サインアウトできます。'}</div> : null}
+          {signedIn || status ? <div className="alert alert-info text-sm">{'サインイン中です。メニューから切替・サインアウトできます。'}</div> : null}
         </div>
       </div>
     </main>
