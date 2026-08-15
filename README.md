@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+# 北区こどもプログラミングコンテスト 応募・審査システム
+`kids-code-contest`
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 1. 技術スタック
+
+小中学生向けのシンプルなUI、リアルタイムな集計機能、外部連携（Google OAuth、メール送信）を効率良く実現するための推奨構成です。
+
+| 領域 | 選定技術 | 選定理由・特徴 |
+| :--- | :--- | :--- |
+| **コード管理** | **GitHub**| ・開発の中心となるツール |
+| **フロントエンド** | **Next.js** (React)<br>**Tailwind CSS** <br>daisyUI| ・応募者・保護者・審査員画面を単一リポジトリで効率よく開発可能<br>・Markdownの入力/表示ライブラリが豊富 |
+| **バックエンド / DB** | **Supabase**<br>(PostgreSQL / Auth) | ・**認証**: Google OAuth / メール認証（保護者用ワンタイムURL）を安全に実装<br>・**DB**: PostgreSQLによる強力なリアルタイム集計 |
+| **ストレージ** | **Cloudflare R2** | ・動画（MP4）やサムネイル（PNG/JPG）のアップロード管理<br>・エグレス（データ転送）コストを低く抑えられる |
+| **メール配信** | **Resend** | ・保護者宛の同意リクエスト等のトランザクションメール到達率が高い<br>・API連携による即時送信が可能 |
+
+> 💡 **インフラ連携**: GitHubを軸に **Vercel** / **Supabase** / **Cloudflare** を自動デプロイ連携。
+
+---
+
+## 2. 段階的実装ロードマップ
+
+コア機能から順番に構築し、テストを進めるアプローチをとります。
+
+```mermaid
+flowchart LR
+    P1["Phase 1<br>DB・認証基盤"] --> P2["Phase 2<br>応募・保護者同意"]
+    P1 --> P3["Phase 3<br>審査・集計"]
+    P2 & P3 --> P4["Phase 4<br>マイページ・仕上げ"]
+
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+* **Phase 1: DB・認証基盤** — Supabaseでのスキーマ設計、Google OAuth / メール認証の実装
+* **Phase 2: 応募・保護者同意** — 作品投稿フォーム、Cloudflare R2連携、同意確認フロー
+* **Phase 3: 審査・集計** — 審査員用ダッシュボード、リアルタイムスコア集計機能
+* **Phase 4: マイページ・仕上げ** — 応募履歴確認、デザイン調整、最終動作テスト
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
