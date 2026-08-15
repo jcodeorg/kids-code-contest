@@ -11,7 +11,7 @@
 | :--- | :--- | :--- |
 | **コード管理** | **GitHub** | ・開発の中心となるリポジトリ管理ツール |
 | **フロントエンド** | **Next.js** (React)<br>**Tailwind CSS**<br>**daisyUI** | ・応募者・保護者・審査員画面を単一リポジトリで効率よく開発可能<br>・Markdownの入力/表示ライブラリが豊富 |
-| **バックエンド / DB** | **Supabase**<br>(PostgreSQL / Auth) | ・**認証**: Google OAuth / メール認証（保護者用ワンタイムURL）を安全に実装<br>・**DB**: PostgreSQLによる強力なリアルタイム集計 |
+| **バックエンド / DB** | **Vercel**<br>**Supabase**<br>(PostgreSQL / Auth) | ・**認証**: Google OAuth / メール認証（保護者用ワンタイムURL）を安全に実装<br>・**DB**: PostgreSQLによる強力なリアルタイム集計 |
 | **ストレージ** | **Cloudflare R2** | ・動画（MP4）やサムネイル（PNG/JPG）のアップロード管理<br>・エグレス（データ転送）コストを低く抑えられる |
 | **メール配信** | **Resend** | ・保護者宛の同意リクエスト等のトランザクションメール到達率が高い<br>・API連携による即時送信が可能 |
 
