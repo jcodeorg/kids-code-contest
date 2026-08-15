@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 NPO Programming Education Laboratry
+Copyright (c) 2026 Programming Education Laboratry
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,27 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+（以下は参考のための日本語訳であり、法的効力を持つのは上記の英語版です）
+
+MIT ライセンス（日本語訳）
+
+Copyright (c) 2026 NPO法人プログラミング教育研究所
+
+本ソフトウェアおよび関連文書ファイル（以下「ソフトウェア」）の複製を取得した者に対し、
+ソフトウェアを使用、コピー、変更、結合、公開、配布、サブライセンス、
+および／または販売する権利を無償で許可します。
+また、ソフトウェアを提供された者にも同様の権利を許可します。
+ただし、以下の条件に従うものとします。
+
+上記の著作権表示および本許諾表示は、
+ソフトウェアのすべての複製または重要な部分に記載されなければなりません。
+
+ソフトウェアは「現状のまま」提供され、
+明示または黙示を問わず、いかなる保証も行いません。
+商品性、特定目的への適合性、権利非侵害についての保証も含まれますが、
+これらに限定されません。
+作者または著作権者は、契約行為、過失、その他の行為によるものであるかを問わず、
+ソフトウェアまたはソフトウェアの使用、その他の取り扱いに起因する
+いかなる請求、損害、その他の責任についても責任を負いません。
