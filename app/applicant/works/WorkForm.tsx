@@ -387,7 +387,7 @@ export default function WorkForm({
             className="easy-mde-editor w-full min-h-40"
             placeholder="# 見出し\n- 箇条書き\n- **太字**\n- `コード`"
           />
-          <div className="mt-1 text-xs text-gray-500"># 見出し / - 箇条書き / **太字** / `コード` を使えます</div>
+          <div className="mt-1 text-xs text-base-content/60"># 見出し / - 箇条書き / **太字** / `コード` を使えます</div>
         </div>
 
         <div>
@@ -404,7 +404,7 @@ export default function WorkForm({
               {thumbnailFileName || (thumbnailUrl ? 'アップロード済み' : 'ファイルが選択されていません')}
             </span>
           </div>
-          {uploadingThumbnail ? <div className="text-sm text-gray-500">アップロード中...</div> : null}
+          {uploadingThumbnail ? <div className="text-sm text-base-content/60">アップロード中...</div> : null}
           {thumbnailUrl ? (
             <div className="mt-2 flex flex-col gap-2">
               <Image
@@ -432,7 +432,7 @@ export default function WorkForm({
             </span>
           </div>
           <p className="mt-1 text-xs text-base-content/60">iPhoneで録画する際は、「互換性優先（設定 → カメラ → フォーマット）」をご利用ください。</p>
-          {uploadingVideo ? <div className="text-sm text-gray-500">アップロード中...</div> : null}
+          {uploadingVideo ? <div className="text-sm text-base-content/60">アップロード中...</div> : null}
           {videoPreviewUrl ? (
             <div className="mt-2 flex flex-col gap-2">
               <video src={videoPreviewUrl} controls className="w-full h-auto max-h-60 object-contain" />
@@ -455,7 +455,7 @@ export default function WorkForm({
             <option value="youtube_url">YouTube URL</option>
             <option value="mp4_file">MP4 ファイル</option>
           </select>
-          {hasUploadedVideo ? <div className="mt-1 text-xs text-gray-500">MP4動画を削除すると変更できます。</div> : null}
+          {hasUploadedVideo ? <div className="mt-1 text-xs text-base-content/60">MP4動画を削除すると変更できます。</div> : null}
         </div>
 
         <div>

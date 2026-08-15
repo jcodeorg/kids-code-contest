@@ -3,7 +3,7 @@
 @plugin "daisyui";
 
 @plugin "daisyui" {
-  themes: kidsbrand --default;
+  themes: kidsbrand --default, kidsbrand-dark --prefersdark;
 }
 
 @plugin "daisyui/theme" {
@@ -50,9 +50,53 @@
   --noise: 0;
 }
 
+@plugin "daisyui/theme" {
+  name: "kidsbrand-dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+
+  /* Same brand hues as kidsbrand, tuned for a dark background */
+  --color-base-100: #111a2b;
+  --color-base-200: #0c1420;
+  --color-base-300: #080f18;
+  --color-base-content: #e4ecfb;
+
+  --color-primary: #184791;
+  --color-primary-content: #eaf1ff;
+
+  --color-secondary: #9aa8ff;
+  --color-secondary-content: #10122a;
+
+  --color-accent: #f5a623;
+  --color-accent-content: #331f04;
+
+  --color-neutral: #a9b3c6;
+  --color-neutral-content: #0b0f16;
+
+  --color-info: #6fb6ea;
+  --color-info-content: #061f2f;
+
+  --color-success: #59d6a6;
+  --color-success-content: #052a1c;
+
+  --color-warning: #f3a32c;
+  --color-warning-content: #2b1c02;
+
+  --color-error: #ef7c8b;
+  --color-error-content: #300910;
+
+  --radius-selector: 0.625rem;
+  --radius-field: 0.75rem;
+  --radius-box: 0.875rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
 :root {
-  --background: #f4f7fb;
-  --foreground: #1f2937;
+  --background: var(--color-base-200);
+  --foreground: var(--color-base-content);
 }
 
 @theme inline {
@@ -65,8 +109,38 @@
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at 0% 0%, #dbeafe 0%, transparent 35%),
-    radial-gradient(circle at 100% 0%, #e0f2fe 0%, transparent 25%),
+    radial-gradient(circle at 0% 0%, color-mix(in oklab, var(--color-primary) 14%, transparent) 0%, transparent 35%),
+    radial-gradient(circle at 100% 0%, color-mix(in oklab, var(--color-info) 14%, transparent) 0%, transparent 25%),
     var(--background);
   color: var(--foreground);
+}
+
+/* EasyMDE ships fixed light colors; re-theme it so the editor follows the current daisyUI theme */
+.EasyMDEContainer .CodeMirror,
+.EasyMDEContainer .editor-toolbar,
+.EasyMDEContainer .editor-preview,
+.EasyMDEContainer .editor-preview-side,
+.EasyMDEContainer .editor-statusbar {
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  border-color: var(--color-base-300);
+}
+
+.EasyMDEContainer .editor-toolbar a {
+  color: var(--color-base-content) !important;
+}
+
+.EasyMDEContainer .editor-toolbar a.active,
+.EasyMDEContainer .editor-toolbar a:hover,
+.EasyMDEContainer .editor-toolbar i.separator {
+  background: var(--color-base-200);
+  border-color: var(--color-base-300);
+}
+
+.EasyMDEContainer .editor-toolbar.disabled-for-preview a:not(.no-disable) {
+  background: var(--color-base-200);
+}
+
+.EasyMDEContainer .CodeMirror-cursor {
+  border-color: var(--color-base-content);
 }

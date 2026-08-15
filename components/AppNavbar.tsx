@@ -159,12 +159,12 @@ export default function AppNavbar() {
   }
 
   return (
-    <header className="w-full border-b border-[#3f84e8] bg-[#4D96FF] text-white shadow-sm">
+    <header className="w-full border-b border-black/10 bg-primary text-primary-content shadow-sm">
       <div className="mx-auto flex h-20 max-w-7xl items-center gap-3 px-3 sm:px-4">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
           {navItems.length > 0 ? (
             <div className="dropdown dropdown-start lg:hidden">
-              <button tabIndex={0} type="button" className="btn btn-sm border-white/30 bg-white/10 text-white hover:bg-white/20" aria-label="メニューを開く">
+              <button tabIndex={0} type="button" className="btn btn-sm border-primary-content/30 bg-primary-content/10 text-primary-content hover:bg-primary-content/20" aria-label="メニューを開く">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
                 </svg>
@@ -179,7 +179,7 @@ export default function AppNavbar() {
             </div>
           ) : null}
 
-          <Link href="/" className="shrink-0 text-2xl font-extrabold tracking-tight text-[#ffb020]">
+          <Link href="/" className="shrink-0 text-2xl font-extrabold tracking-tight text-accent">
             コンテスト
           </Link>
 
@@ -189,7 +189,7 @@ export default function AppNavbar() {
                 <Link
                   key={`${item.href}-${item.label}`}
                   href={item.href}
-                  className="rounded-full px-3 py-2 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+                  className="rounded-full px-3 py-2 text-sm font-semibold text-primary-content/90 transition-colors hover:bg-primary-content/10 hover:text-primary-content"
                 >
                   {item.label}
                 </Link>
@@ -200,7 +200,7 @@ export default function AppNavbar() {
 
         <div className="ml-auto flex items-center gap-3">
           <div className="dropdown dropdown-end">
-            <button tabIndex={0} className="btn btn-sm border-white/30 bg-white/15 text-white hover:bg-white/25" disabled={busy}>
+            <button tabIndex={0} className="btn btn-sm border-primary-content/30 bg-primary-content/15 text-primary-content hover:bg-primary-content/25" disabled={busy}>
               {signedIn ? (
                 <>
                   <span className="max-w-[8rem] truncate font-semibold">{userName}</span>
