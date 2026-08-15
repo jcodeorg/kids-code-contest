@@ -97,10 +97,6 @@ export async function POST(req: Request) {
     const publicComment = typeof body?.public_comment === 'string' ? body.public_comment.trim() : ''
     const privateComment = typeof body?.private_comment === 'string' ? body.private_comment.trim() : ''
 
-    if (phase === 'final' && !publicComment) {
-      return NextResponse.json({ error: 'public_comment is required in final phase' }, { status: 400 })
-    }
-
     const totalScore = Math.round((scoreOriginality + scoreSkill + scoreEffort + scorePurpose + scoreOther) * 10) / 10
     const status = typeof body?.status === 'string' && body.status ? body.status : 'completed'
 

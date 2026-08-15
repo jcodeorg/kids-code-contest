@@ -96,9 +96,14 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const contestIdText = url.searchParams.get('contest_id') || ''
     const contestId = contestIdText ? Number(contestIdText) : null
+    const entryIdText = url.searchParams.get('entry_id') || ''
+    const entryIdFilter = entryIdText ? Number(entryIdText) : null
 
     if (contestIdText && Number.isNaN(contestId)) {
       return NextResponse.json({ error: 'contest_id must be number' }, { status: 400 })
+    }
+    if (entryIdText && Number.isNaN(entryIdFilter)) {
+      return NextResponse.json({ error: 'entry_id must be number' }, { status: 400 })
     }
 
     let query = supabaseAdmin
@@ -107,6 +112,7 @@ export async function GET(req: Request) {
       .order('work_number', { ascending: true })
 
     if (contestId !== null) query = query.eq('contest_id', contestId)
+    if (entryIdFilter !== null) query = query.eq('entry_id', entryIdFilter)
 
     const isReviewer = REVIEWER_ROLES.includes(auth.identity.currentRoleId as RoleId)
     if (!isReviewer) {
