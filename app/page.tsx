@@ -74,12 +74,12 @@ export default function Home() {
           <div>
             <h1 className="card-title text-3xl">北区こどもプログラミングコンテスト</h1>
             <p className="text-sm text-base-content/70 mt-2">北区こどもプログラミングコンテストの応募・審査サイトです。</p>
-            <p className="text-sm text-base-content/70 mt-2">本サイトのソースコードはこちら GitHub <a href="https://github.com/jcodeorg/kids-code-contest" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">https://github.com/jcodeorg/kids-code-contest</a></p>
+            <p className="text-sm text-base-content/70 mt-2">本サイトのソースコードはこちら（GitHub <a href="https://github.com/jcodeorg/kids-code-contest" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">https://github.com/jcodeorg/kids-code-contest</a>）</p>
           </div>
 
           {/* 未サインイン向けの画面は常に表示 */}
           <div className="flex flex-col gap-3">
-            <button autoFocus className="btn w-full flex items-center justify-center gap-2 bg-white text-black border transition-transform duration-150 hover:scale-105 hover:shadow-md active:scale-100" onClick={signInWithGoogle}>
+            <button autoFocus className="btn btn-lg w-full flex items-center justify-center gap-2 bg-white text-black border-2 border-blue-500 font-semibold shadow-lg transition-transform duration-150 hover:scale-105 hover:shadow-xl active:scale-100" onClick={signInWithGoogle}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 533.5 544.3" className="h-5 w-5" aria-hidden="true" focusable="false">
                 <path fill="#4285F4" d="M533.5 278.4c0-17.4-1.6-34.1-4.7-50.4H272v95.3h147.1c-6.3 34-25 62.8-53.3 82v68.1h85.9c50.4-46.5 80.8-114.7 80.8-195z"/>
                 <path fill="#34A853" d="M272 544.3c72.6 0 133.6-24.1 178.1-65.6l-85.9-68.1c-23.9 16-54.4 25.6-92.2 25.6-70.8 0-130.7-47.8-152-112.2H34.9v70.6C79.4 486.3 167.3 544.3 272 544.3z"/>
@@ -99,6 +99,15 @@ export default function Home() {
           {/* 中央のサインイン状態表示・ダッシュボードボタンは削除 */}
 
           <p className="text-sm text-base-content/80 mt-2">できるだけ「Google でサインイン」を使おう。そっちのほうがかんたんだよ。Googleを使えない人だけ、メールでサインインしてね。</p>
+
+          <div>
+            <h2 className="card-title text-xl justify-center text-center">
+              NPO法人プログラミング教育研究所
+            </h2>
+            <h2 className="card-title text-xl justify-center text-center">
+              <a href="https://www.j-code.org/" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">https://www.j-code.org/</a>
+            </h2>
+          </div>
 
           {signedIn || status ? <div className="alert alert-info text-sm">{'サインイン中です。メニューから切替・サインアウトできます。'}</div> : null}
         </div>
