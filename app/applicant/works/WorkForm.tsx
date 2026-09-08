@@ -123,6 +123,15 @@ export default function WorkForm({
     return headers
   }
 
+  async function parseJsonResponse(res: Response) {
+    const text = await res.text()
+    try {
+      return text ? JSON.parse(text) : {}
+    } catch {
+      throw new Error(res.ok ? '予期しない応答を受け取りました' : `通信エラーが発生しました (${res.status})`)
+    }
+  }
+
   useEffect(() => {
     if (!initialValues) return
 
@@ -216,6 +225,32 @@ export default function WorkForm({
       if (kind === 'thumbnail') setUploadingThumbnail(true)
       else setUploadingVideo(true)
 
+      if (kind === 'video') {
+        // Videos can exceed the server's request body limit, so upload directly to
+        // storage via a presigned URL instead of routing the file through our API.
+        const headers = await buildAuthHeaders()
+        const presignRes = await fetch('/api/uploads', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            kind,
+            filename: file.name,
+            contentType: file.type || 'video/mp4',
+          }),
+        })
+        const presignData = await parseJsonResponse(presignRes)
+        if (!presignRes.ok) throw new Error(presignData?.error || 'upload failed')
+
+        const putRes = await fetch(presignData.uploadUrl as string, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type || 'video/mp4' },
+          body: file,
+        })
+        if (!putRes.ok) throw new Error('動画のアップロードに失敗しました')
+
+        return { url: presignData.url as string, key: (presignData.key as string | undefined) || '' }
+      }
+
       const fd = new FormData()
       fd.append('file', file)
       fd.append('kind', kind)
@@ -228,7 +263,7 @@ export default function WorkForm({
         headers,
         body: fd,
       })
-      const data = await res.json()
+      const data = await parseJsonResponse(res)
       if (!res.ok) throw new Error(data?.error || 'upload failed')
       return { url: data.url as string, key: (data.key as string | undefined) || '' }
     } finally {
@@ -245,7 +280,7 @@ export default function WorkForm({
       headers,
       body: JSON.stringify({ url }),
     })
-    const data = await res.json()
+    const data = await parseJsonResponse(res)
     if (!res.ok) throw new Error(data?.error || 'delete failed')
   }
 

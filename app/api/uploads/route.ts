@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { requireAuthWithRoles } from '../../../lib/auth/request-auth'
 
 export const runtime = 'nodejs'
@@ -55,10 +56,48 @@ function createR2Client() {
   })
 }
 
+// Large files (video) exceed the serverless function body-size limit, so the browser
+// requests a presigned R2 URL here and uploads the file directly to R2 instead.
+async function handlePresignRequest(req: Request, auth: Extract<Awaited<ReturnType<typeof requireAuthWithRoles>>, { ok: true }>) {
+  const body = await req.json().catch(() => null)
+  const kind = typeof body?.kind === 'string' ? body.kind : ''
+  const contentType = typeof body?.contentType === 'string' ? body.contentType : ''
+  const filename = typeof body?.filename === 'string' && body.filename ? body.filename : 'upload'
+
+  if (!isAllowedKind(kind)) return NextResponse.json({ error: 'invalid kind' }, { status: 400 })
+  if (kind === 'thumbnail' && !contentType.startsWith('image/')) {
+    return NextResponse.json({ error: 'thumbnail must be image/*' }, { status: 400 })
+  }
+  if (kind === 'video' && !contentType.startsWith('video/')) {
+    return NextResponse.json({ error: 'video must be video/*' }, { status: 400 })
+  }
+
+  const bucket = process.env.R2_BUCKET_NAME
+  const client = createR2Client()
+  if (!bucket || !client) {
+    return NextResponse.json({ error: 'R2 not configured' }, { status: 500 })
+  }
+
+  const sanitized = filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const key = `uploads/${kind}/${auth.identity.userId}/${Date.now()}-${sanitized}`
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    ContentType: contentType || 'application/octet-stream',
+  })
+  const uploadUrl = await getSignedUrl(client, command, { expiresIn: 300 })
+
+  return NextResponse.json({ ok: true, uploadUrl, url: buildPublicUrl(key), key })
+}
+
 export async function POST(req: Request) {
   try {
     const auth = await requireAuthWithRoles(req)
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+    if ((req.headers.get('content-type') || '').includes('application/json')) {
+      return await handlePresignRequest(req, auth)
+    }
 
     const formData = await req.formData()
     const file = formData.get('file') as File | null
