@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '../../../../../lib/supabase/client'
 
@@ -47,7 +47,10 @@ function renderMarkdown(markdown: string): ReactNode[] {
 
 export default function WorkPreviewPage() {
   const params = useParams() as { workId?: string }
+  const searchParams = useSearchParams()
   const workId = params.workId || ''
+  const ownerId = searchParams.get('owner_id') || ''
+  const contestId = searchParams.get('contest_id') || ''
   const [work, setWork] = useState<Work | null>(null)
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState('')
@@ -61,7 +64,10 @@ export default function WorkPreviewPage() {
           const headers: Record<string, string> = {}
           const token = session.data.session?.access_token
           if (token) headers.Authorization = `Bearer ${token}`
-          const res = await fetch('/api/works', { headers })
+          const endpoint = ownerId
+            ? `/api/admin/users/${encodeURIComponent(ownerId)}/works?work_id=${encodeURIComponent(workId)}`
+            : '/api/works'
+          const res = await fetch(endpoint, { headers })
           const data = await res.json()
           if (!res.ok) {
             setStatus(data?.error || '作品取得に失敗しました')
@@ -81,7 +87,11 @@ export default function WorkPreviewPage() {
       })()
     }, 0)
     return () => window.clearTimeout(timerId)
-  }, [workId])
+  }, [ownerId, workId])
+
+  const backHref = ownerId
+    ? `/contest_admin/applicants/${encodeURIComponent(ownerId)}/works${contestId ? `?contest_id=${encodeURIComponent(contestId)}` : ''}`
+    : '/applicant'
 
   return (
     <div className="w-full px-4 py-8">
@@ -93,7 +103,7 @@ export default function WorkPreviewPage() {
           {work ? (
             <article className="space-y-5">
               <div className="flex justify-end">
-                <Link className="btn btn-ghost btn-sm" href="/applicant">もどる</Link>
+                <Link className="btn btn-ghost btn-sm" href={backHref}>もどる</Link>
               </div>
               <h2 className="text-3xl font-bold">{work.title}</h2>
 

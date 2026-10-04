@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase/client'
@@ -17,6 +18,7 @@ type Contest = {
 type EntryRow = {
   entry_id: number
   contest_id: number
+  user_id: string | null
   work_id: string | null
   work_number: number | null
   status: string | null
@@ -251,7 +253,16 @@ export default function ContestAdminJudgingPanel({ mode = 'dashboard' }: Contest
                 ) : entries.map((entry) => (
                   <tr key={entry.entry_id}>
                     <td>
-                      <div className="font-semibold">{entry.users?.name || '-'}</div>
+                      {entry.user_id ? (
+                        <Link
+                          className="font-semibold link link-primary"
+                          href={`/contest_admin/applicants/${encodeURIComponent(entry.user_id)}/works?contest_id=${entry.contest_id}`}
+                        >
+                          {entry.users?.name || '-'}
+                        </Link>
+                      ) : (
+                        <div className="font-semibold">{entry.users?.name || '-'}</div>
+                      )}
                       <div className="text-xs text-base-content/70">{entry.users?.email || '-'}</div>
                     </td>
                     <td>
