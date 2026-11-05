@@ -72,9 +72,18 @@ export default function Home() {
       <div className="max-w-2xl mx-auto card bg-base-100 shadow-xl">
         <div className="card-body gap-6">
           <div>
-            <h1 className="card-title text-3xl">北区こどもプログラミングコンテスト</h1>
-            <p className="text-sm text-base-content/70 mt-2">北区こどもプログラミングコンテストの応募・審査サイトです。</p>
-            <p className="text-sm text-base-content/70 mt-2">本サイトのソースコードはこちら（GitHub <a href="https://github.com/jcodeorg/kids-code-contest" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">https://github.com/jcodeorg/kids-code-contest</a>）</p>
+            <h1 className="card-title text-3xl justify-center text-center">北区こどもプログラミングコンテスト</h1>
+          </div>
+          <div>
+            <h2 className="card-title text-lg justify-center text-center">
+              プログラミングコンテストについて
+            </h2>
+            <h2 className="card-title text-xl justify-center text-center">
+              <a href="https://www.j-code.org/contest" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">https://www.j-code.org/contest</a>
+            </h2>
+           
+            <p className="text-sm text-base-content/80 mt-2 justify-center text-center"><br></br>きたコンの人は「Google でサインイン」をつかうと べんりだよ。</p>
+
           </div>
 
           {/* 未サインイン向けの画面は常に表示 */}
@@ -98,15 +107,16 @@ export default function Home() {
 
           {/* 中央のサインイン状態表示・ダッシュボードボタンは削除 */}
 
-          <p className="text-sm text-base-content/80 mt-2">できるだけ「Google でサインイン」を使おう。そっちのほうがかんたんだよ。Googleを使えない人だけ、メールでサインインしてね。</p>
+          <p className="text-sm text-base-content/80 mt-2 justify-center text-center">Googleをつかえない人は、メールでサインインしてね。</p>
 
           <div>
-            <h2 className="card-title text-xl justify-center text-center">
+            <h2 className="card-title text-lg justify-center text-center">
               NPO法人プログラミング教育研究所
             </h2>
-            <h2 className="card-title text-xl justify-center text-center">
+            <h2 className="card-title text-lg justify-center text-center">
               <a href="https://www.j-code.org/" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">https://www.j-code.org/</a>
             </h2>
+            <p className="text-sm text-base-content/70 mt-2 justify-center text-center">本サイトのソースコード<br></br> <a href="https://github.com/jcodeorg/kids-code-contest" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">https://github.com/jcodeorg/kids-code-contest</a> </p>
           </div>
 
           {signedIn || status ? <div className="alert alert-info text-sm">{'サインイン中です。メニューから切替・サインアウトできます。'}</div> : null}
