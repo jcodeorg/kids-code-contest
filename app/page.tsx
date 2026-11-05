@@ -78,7 +78,7 @@ export default function Home() {
             <h2 className="card-title text-lg justify-center text-center">
               プログラミングコンテストについて
             </h2>
-            <h2 className="card-title text-xl justify-center text-center">
+            <h2 className="card-title text-lg justify-center text-center">
               <a href="https://www.j-code.org/contest" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">https://www.j-code.org/contest</a>
             </h2>
            
